@@ -1,6 +1,12 @@
 /// SVG is a type alias for [String], representing an SVG representation of a card.
 pub type SVG = String;
 
+/// CardSettings holds unique settings for the [Card].
+pub struct CardSettings {
+    /// Offset (pixels) is used to adjust the position of the card in the SVG relative to its container.
+    pub offset: f32,
+}
+
 /// Card represents a card with a width, height, and title. Its a base wrapper for cards of different types.
 /// It provides a method to create a new card and render it as an [SVG] string.
 pub struct Card {
@@ -9,29 +15,37 @@ pub struct Card {
     title: String,
     description: String,
     body: String,
-    style: Option<String>,
+    /// The CSS base style for the card, loaded from an external file.
+    style: String,
+    settings: CardSettings,
 }
 
 impl Card {
     /// Creates a new [Card] with the specified parameters.
-    pub fn new(width: i32, height: i32, title: String, description: String, body: String) -> Self {
-        Card {
+    pub fn new(
+        width: i32,
+        height: i32,
+        title: String,
+        description: String,
+        body: String,
+        settings: CardSettings,
+    ) -> Result<Self, String> {
+        let card = Card {
             width,
             height,
             description,
             title,
             body,
-            style: Some(Self::load_style()),
-        }
+            style: Self::load_style(),
+            settings,
+        };
+        card.validate()?;
+        Ok(card)
     }
 
     /// Renders the [Card] as an [SVG] string.
     pub fn render(&self) -> SVG {
-        let style = self
-            .style
-            .as_deref()
-            .map(Self::indent_style)
-            .unwrap_or_else(String::new);
+        let style = Self::indent_style(&self.style);
 
         format!(
             r#"<svg
@@ -64,6 +78,31 @@ impl Card {
         )
     }
 
+    /// Validates the [Card]'s dimensions and settings.
+    fn validate(&self) -> Result<(), String> {
+        if self.width < 100 {
+            return Err(format!(
+                "Card width must be at least 100, got {}",
+                self.width
+            ));
+        }
+        if self.height < 100 {
+            return Err(format!(
+                "Card height must be at least 100, got {}",
+                self.height
+            ));
+        }
+        let max_offset_w = self.width as f32 * 0.3;
+        let max_offset_h = self.height as f32 * 0.3;
+        if self.settings.offset > max_offset_w || self.settings.offset > max_offset_h {
+            return Err(format!(
+                "Card offset must not exceed 30% of width or height (max: {}, {}), got {}",
+                max_offset_w, max_offset_h, self.settings.offset
+            ));
+        }
+        Ok(())
+    }
+
     /// Loads the CSS style for the [Card] from a file.
     fn load_style() -> String {
         // Embed the CSS file into the binary at compile time
@@ -77,14 +116,20 @@ impl Card {
 
     /// Renders the title of the [Card] as an SVG text element.
     fn render_title(&self) -> String {
-        format!(r#"<text x="1" y="16" class="title">{}</text>"#, self.title)
+        format!(
+            r#"<text x="{}" y="16" class="title">{}</text>"#,
+            self.settings.offset * 2.0,
+            self.title
+        )
     }
 
     fn render_background(&self) -> String {
         format!(
-            r#"<rect x="0.5" y="0.5" rx="5" width="{width}" height="{height}" stroke="{stroke_color}" fill="{fill_color}" stroke-opacity="{stroke_opacity}"/>"#,
-            width = self.width - 2,
-            height = self.height - 1,
+            r#"<rect x="{pos_x}" y="{pos_y}" rx="5" width="{width}" height="{height}" stroke="{stroke_color}" fill="{fill_color}" stroke-opacity="{stroke_opacity}"/>"#,
+            pos_x = self.settings.offset,
+            pos_y = self.settings.offset,
+            width = self.width as f32 - self.settings.offset * 2.0,
+            height = self.height as f32 - self.settings.offset * 2.0,
             fill_color = "#ffffff00",
             stroke_color = "#e6e1e1ff",
             stroke_opacity = "1",
@@ -100,19 +145,60 @@ mod tests {
         use super::*;
 
         #[test]
-        fn test_card_creation() {
+        fn test_card_creation_valid() {
             let card = Card::new(
-                10,
-                20,
+                100,
+                120,
                 "Test Card".to_string(),
                 "Test Desc".to_string(),
                 "Test Body".to_string(),
-            );
-            assert_eq!(card.width, 10);
-            assert_eq!(card.height, 20);
+                CardSettings { offset: 10.0 },
+            )
+            .expect("Card should be valid");
+            assert_eq!(card.width, 100);
+            assert_eq!(card.height, 120);
             assert_eq!(card.title, "Test Card");
             assert_eq!(card.description, "Test Desc");
             assert_eq!(card.body, "Test Body");
+        }
+
+        #[test]
+        fn test_card_creation_invalid_width() {
+            let card = Card::new(
+                99,
+                120,
+                "Test Card".to_string(),
+                "Test Desc".to_string(),
+                "Test Body".to_string(),
+                CardSettings { offset: 10.0 },
+            );
+            assert!(card.is_err());
+        }
+
+        #[test]
+        fn test_card_creation_invalid_height() {
+            let card = Card::new(
+                100,
+                99,
+                "Test Card".to_string(),
+                "Test Desc".to_string(),
+                "Test Body".to_string(),
+                CardSettings { offset: 10.0 },
+            );
+            assert!(card.is_err());
+        }
+
+        #[test]
+        fn test_card_creation_invalid_offset() {
+            let card = Card::new(
+                100,
+                120,
+                "Test Card".to_string(),
+                "Test Desc".to_string(),
+                "Test Body".to_string(),
+                CardSettings { offset: 50.0 },
+            );
+            assert!(card.is_err());
         }
     }
 
@@ -132,12 +218,14 @@ mod tests {
         #[test]
         fn test_render_title() {
             let card = Card::new(
-                10,
-                20,
+                100,
+                120,
                 "Test Title".to_string(),
                 "".to_string(),
                 "".to_string(),
-            );
+                CardSettings { offset: 0.5 },
+            )
+            .unwrap();
             let rendered_title = card.render_title();
             assert_eq!(
                 rendered_title,
@@ -159,7 +247,9 @@ mod tests {
                 "SVG Card".to_string(),
                 "SVG Description".to_string(),
                 "<rect width=\"100\" height=\"200\" fill=\"#fff\"/>".to_string(),
-            );
+                CardSettings { offset: 0.5 },
+            )
+            .unwrap();
             let svg = card.render();
 
             // Validate SVG is well-formed XML by parsing the entire document

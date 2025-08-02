@@ -1,8 +1,17 @@
 mod cards;
 
-use cards::card::Card;
+use cards::card::{Card, CardSettings};
 
 fn main() {
-    let card = Card::new(100, 80, "Hello".to_string(), "World".to_string(), "".to_string()).render();
+    let card = Card::new(
+        200,
+        120,
+        "Hello".to_string(),
+        "World".to_string(),
+        "".to_string(),
+        CardSettings { offset: 0.5 },
+    )
+    .unwrap()
+    .render();
     println!("{}", card);
 }
