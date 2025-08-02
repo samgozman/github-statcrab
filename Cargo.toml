@@ -1,0 +1,13 @@
+[package]
+name = "github-statcrab"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/samgozman/github-statcrab"
+repository = "https://github.com/samgozman/github-statcrab"
+authors = ["Sam Gozman <sam@gozman.space>"]
+description = "GitHub profile stats for readme generated on the fly"
+rust-version = "1.88.0"
+
+[dependencies]
