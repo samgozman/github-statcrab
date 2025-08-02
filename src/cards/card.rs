@@ -48,6 +48,7 @@ impl Card {
 {style}  </style>
   <title id="title-id">{title}</title>
   <desc id="description-id">{description}</desc>
+  {rendered_background}
   {rendered_title}
   {body}
 </svg>
@@ -57,9 +58,16 @@ impl Card {
             title = self.title,
             description = self.description,
             body = self.body,
+            rendered_background = self.render_background(),
             rendered_title = self.render_title(),
             style = style
         )
+    }
+
+    /// Loads the CSS style for the [Card] from a file.
+    fn load_style() -> String {
+        // Embed the CSS file into the binary at compile time
+        include_str!("../../assets/css/card.css").to_string()
     }
 
     /// Indents each line of the style string by two spaces.
@@ -69,13 +77,18 @@ impl Card {
 
     /// Renders the title of the [Card] as an SVG text element.
     fn render_title(&self) -> String {
-        format!(r#"<text x="0" y="16" class="title">{}</text>"#, self.title)
+        format!(r#"<text x="1" y="16" class="title">{}</text>"#, self.title)
     }
 
-    /// Loads the CSS style for the [Card] from a file.
-    fn load_style() -> String {
-        // Embed the CSS file into the binary at compile time
-        include_str!("../../assets/css/card.css").to_string()
+    fn render_background(&self) -> String {
+        format!(
+            r#"<rect x="0.5" y="0.5" rx="5" width="{width}" height="{height}" stroke="{stroke_color}" fill="{fill_color}" stroke-opacity="{stroke_opacity}"/>"#,
+            width = self.width - 2,
+            height = self.height - 1,
+            fill_color = "#ffffff00",
+            stroke_color = "#e6e1e1ff",
+            stroke_opacity = "1",
+        )
     }
 }
 
@@ -128,7 +141,7 @@ mod tests {
             let rendered_title = card.render_title();
             assert_eq!(
                 rendered_title,
-                r#"<text x="0" y="16" class="title">Test Title</text>"#
+                r#"<text x="1" y="16" class="title">Test Title</text>"#
             );
         }
     }
