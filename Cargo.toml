@@ -11,3 +11,6 @@ description = "GitHub profile stats for readme generated on the fly"
 rust-version = "1.88.0"
 
 [dependencies]
+
+[dev-dependencies]
+quick-xml = "0.38.0"
