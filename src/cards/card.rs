@@ -114,6 +114,21 @@ impl Card {
                 max_offset_w, max_offset_h, self.settings.offset
             ));
         }
+
+        if self.settings.offset < 0.0 {
+            return Err("Card offset must be non-negative".to_string());
+        }
+
+        if self.settings.offset >= self.width as f32 / 2.0
+            || self.settings.offset >= self.height as f32 / 2.0
+        {
+            return Err(format!(
+                "Card offset must be less than half of width and height (max: {}, {}), got {}",
+                self.width as f32 / 2.0,
+                self.height as f32 / 2.0,
+                self.settings.offset
+            ));
+        }
         Ok(())
     }
 
@@ -130,9 +145,12 @@ impl Card {
 
     /// Renders the title of the [Card] as an SVG text element.
     fn render_title(&self) -> String {
+        let font_size = 18;
+
         format!(
-            r#"<text x="{}" y="16" class="title">{}</text>"#,
-            self.settings.offset * 2.0,
+            r#"<text x="{}" y="{}" class="title">{}</text>"#,
+            self.settings.offset * 10.0,
+            font_size as f32 + self.settings.offset,
             self.title
         )
     }
@@ -230,6 +248,40 @@ mod tests {
             );
             assert!(card.is_err());
         }
+
+        #[test]
+        fn test_card_creation_negative_offset() {
+            let card = Card::new(
+                100,
+                120,
+                "Test Card".to_string(),
+                "Test Desc".to_string(),
+                "Test Body".to_string(),
+                CardSettings {
+                    offset: -10.0,
+                    hide_title: false,
+                    hide_background: false,
+                },
+            );
+            assert!(card.is_err());
+        }
+
+        #[test]
+        fn test_card_creation_offset_too_large() {
+            let card = Card::new(
+                100,
+                120,
+                "Test Card".to_string(),
+                "Test Desc".to_string(),
+                "Test Body".to_string(),
+                CardSettings {
+                    offset: 60.0,
+                    hide_title: false,
+                    hide_background: false,
+                },
+            );
+            assert!(card.is_err());
+        }
     }
 
     mod fn_load_style {
@@ -263,7 +315,7 @@ mod tests {
             let rendered_title = card.render_title();
             assert_eq!(
                 rendered_title,
-                r#"<text x="1" y="16" class="title">Test Title</text>"#
+                r#"<text x="5" y="18.5" class="title">Test Title</text>"#
             );
         }
     }
