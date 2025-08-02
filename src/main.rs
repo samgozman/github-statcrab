@@ -9,7 +9,11 @@ fn main() {
         "Hello".to_string(),
         "World".to_string(),
         "".to_string(),
-        CardSettings { offset: 0.5 },
+        CardSettings {
+            offset: 0.5,
+            hide_title: false,
+            hide_background: false,
+        },
     )
     .unwrap()
     .render();

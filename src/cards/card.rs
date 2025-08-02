@@ -3,8 +3,12 @@ pub type SVG = String;
 
 /// CardSettings holds unique settings for the [Card].
 pub struct CardSettings {
-    /// Offset (pixels) is used to adjust the position of the card in the SVG relative to its container.
+    /// Offset (pixels) is used to adjust the position of the [Card] in the SVG relative to its container.
     pub offset: f32,
+    /// Hide title title of the [Card].
+    pub hide_title: bool,
+    /// Hide background of the [Card].
+    pub hide_background: bool,
 }
 
 /// Card represents a card with a width, height, and title. Its a base wrapper for cards of different types.
@@ -46,6 +50,16 @@ impl Card {
     /// Renders the [Card] as an [SVG] string.
     pub fn render(&self) -> SVG {
         let style = Self::indent_style(&self.style);
+        let rendered_background = if !self.settings.hide_background {
+            self.render_background()
+        } else {
+            String::new()
+        };
+        let rendered_title = if !self.settings.hide_title {
+            self.render_title()
+        } else {
+            String::new()
+        };
 
         format!(
             r#"<svg
@@ -72,8 +86,8 @@ impl Card {
             title = self.title,
             description = self.description,
             body = self.body,
-            rendered_background = self.render_background(),
-            rendered_title = self.render_title(),
+            rendered_background = rendered_background,
+            rendered_title = rendered_title,
             style = style
         )
     }
@@ -152,7 +166,11 @@ mod tests {
                 "Test Card".to_string(),
                 "Test Desc".to_string(),
                 "Test Body".to_string(),
-                CardSettings { offset: 10.0 },
+                CardSettings {
+                    offset: 10.0,
+                    hide_title: false,
+                    hide_background: false,
+                },
             )
             .expect("Card should be valid");
             assert_eq!(card.width, 100);
@@ -170,7 +188,11 @@ mod tests {
                 "Test Card".to_string(),
                 "Test Desc".to_string(),
                 "Test Body".to_string(),
-                CardSettings { offset: 10.0 },
+                CardSettings {
+                    offset: 10.0,
+                    hide_title: false,
+                    hide_background: false,
+                },
             );
             assert!(card.is_err());
         }
@@ -183,7 +205,11 @@ mod tests {
                 "Test Card".to_string(),
                 "Test Desc".to_string(),
                 "Test Body".to_string(),
-                CardSettings { offset: 10.0 },
+                CardSettings {
+                    offset: 10.0,
+                    hide_title: false,
+                    hide_background: false,
+                },
             );
             assert!(card.is_err());
         }
@@ -196,7 +222,11 @@ mod tests {
                 "Test Card".to_string(),
                 "Test Desc".to_string(),
                 "Test Body".to_string(),
-                CardSettings { offset: 50.0 },
+                CardSettings {
+                    offset: 50.0,
+                    hide_title: false,
+                    hide_background: false,
+                },
             );
             assert!(card.is_err());
         }
@@ -223,7 +253,11 @@ mod tests {
                 "Test Title".to_string(),
                 "".to_string(),
                 "".to_string(),
-                CardSettings { offset: 0.5 },
+                CardSettings {
+                    offset: 0.5,
+                    hide_title: false,
+                    hide_background: false,
+                },
             )
             .unwrap();
             let rendered_title = card.render_title();
@@ -235,6 +269,73 @@ mod tests {
     }
 
     mod fn_render {
+        #[test]
+        fn test_render_hides_title_svg_text() {
+            let card = Card::new(
+                100,
+                120,
+                "Test Title".to_string(),
+                "Test Desc".to_string(),
+                "Test Body".to_string(),
+                CardSettings {
+                    offset: 0.5,
+                    hide_title: true,
+                    hide_background: false,
+                },
+            )
+            .unwrap();
+            let svg = card.render();
+            // The <title> tag should always be present
+            assert!(svg.contains("<title id=\"title-id\">Test Title</title>"));
+            // The SVG text element should NOT be present
+            assert!(!svg.contains("<text x="));
+        }
+
+        #[test]
+        fn test_render_hides_background_rect() {
+            let card = Card::new(
+                100,
+                120,
+                "Test Title".to_string(),
+                "Test Desc".to_string(),
+                "Test Body".to_string(),
+                CardSettings {
+                    offset: 0.5,
+                    hide_title: false,
+                    hide_background: true,
+                },
+            )
+            .unwrap();
+            let svg = card.render();
+            // The background <rect> should NOT be present
+            assert!(!svg.contains("<rect "));
+            // The SVG text element should be present
+            assert!(svg.contains("<text x="));
+        }
+
+        #[test]
+        fn test_render_hides_both_title_and_background() {
+            let card = Card::new(
+                100,
+                120,
+                "Test Title".to_string(),
+                "Test Desc".to_string(),
+                "Test Body".to_string(),
+                CardSettings {
+                    offset: 0.5,
+                    hide_title: true,
+                    hide_background: true,
+                },
+            )
+            .unwrap();
+            let svg = card.render();
+            // The <title> tag should always be present
+            assert!(svg.contains("<title id=\"title-id\">Test Title</title>"));
+            // The SVG text element should NOT be present
+            assert!(!svg.contains("<text x="));
+            // The background <rect> should NOT be present
+            assert!(!svg.contains("<rect "));
+        }
         use super::*;
         use quick_xml::Reader;
         use quick_xml::events::Event;
@@ -247,7 +348,11 @@ mod tests {
                 "SVG Card".to_string(),
                 "SVG Description".to_string(),
                 "<rect width=\"100\" height=\"200\" fill=\"#fff\"/>".to_string(),
-                CardSettings { offset: 0.5 },
+                CardSettings {
+                    offset: 0.5,
+                    hide_title: false,
+                    hide_background: false,
+                },
             )
             .unwrap();
             let svg = card.render();
