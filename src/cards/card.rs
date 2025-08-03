@@ -14,8 +14,8 @@ pub struct CardSettings {
 /// Card represents a card with a width, height, and title. Its a base wrapper for cards of different types.
 /// It provides a method to create a new card and render it as an [SVG] string.
 pub struct Card {
-    width: i32,
-    height: i32,
+    width: u32,
+    height: u32,
     title: String,
     description: String,
     body: String,
@@ -27,8 +27,8 @@ pub struct Card {
 impl Card {
     /// Creates a new [Card] with the specified parameters.
     pub fn new(
-        width: i32,
-        height: i32,
+        width: u32,
+        height: u32,
         title: String,
         description: String,
         body: String,
