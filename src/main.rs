@@ -1,21 +1,20 @@
 mod cards;
 
-use cards::card::{Card, CardSettings};
+use cards::stats_card::StatsCard;
 
 fn main() {
-    let card = Card::new(
-        200,
-        120,
-        "Hello".to_string(),
-        "World".to_string(),
-        "".to_string(),
-        CardSettings {
-            offset: 0.5,
-            hide_title: false,
-            hide_background: false,
-        },
-    )
-    .unwrap()
+    let card = StatsCard {
+        username: "Sam Gozman".to_string(),
+        stars_count: Some(123),
+        commits_ytd_count: Some(123),
+        issues_count: Some(123),
+        pull_requests_count: Some(123),
+        merge_requests_count: Some(123),
+        reviews_count: Some(123),
+        started_discussions_count: Some(123),
+        answered_discussions_count: Some(123),
+    }
     .render();
+
     println!("{}", card);
 }

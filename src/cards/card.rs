@@ -33,7 +33,7 @@ impl Card {
         description: String,
         body: String,
         settings: CardSettings,
-    ) -> Result<Self, String> {
+    ) -> anyhow::Result<Self, anyhow::Error> {
         let card = Card {
             width,
             height,
@@ -43,13 +43,14 @@ impl Card {
             style: Self::load_style(),
             settings,
         };
-        card.validate()?;
+        card.validate().map_err(anyhow::Error::msg)?;
         Ok(card)
     }
 
     /// Renders the [Card] as an [SVG] string.
     pub fn render(&self) -> SVG {
-        let style = Self::indent_style(&self.style);
+        let style = Self::indent(&self.style, 2);
+        let body = Self::indent(&self.body, 4);
         let rendered_background = if !self.settings.hide_background {
             self.render_background()
         } else {
@@ -78,14 +79,16 @@ impl Card {
   <desc id="description-id">{description}</desc>
   {rendered_background}
   {rendered_title}
-  {body}
+  <g class="body">
+{body}
+  </g>
 </svg>
 "#,
             width = self.width,
             height = self.height,
             title = self.title,
             description = self.description,
-            body = self.body,
+            body = body,
             rendered_background = rendered_background,
             rendered_title = rendered_title,
             style = style
@@ -138,9 +141,13 @@ impl Card {
         include_str!("../../assets/css/card.css").to_string()
     }
 
-    /// Indents each line of the style string by two spaces.
-    fn indent_style(style: &str) -> String {
-        style.lines().map(|line| format!("  {}\n", line)).collect()
+    /// Indents each line by the given number of spaces.
+    fn indent(lines: &str, spaces: usize) -> String {
+        let pad = " ".repeat(spaces);
+        lines
+            .lines()
+            .map(|line| format!("{}{}\n", pad, line))
+            .collect()
     }
 
     /// Renders the title of the [Card] as an SVG text element.
