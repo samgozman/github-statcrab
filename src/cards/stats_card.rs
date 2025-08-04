@@ -40,35 +40,35 @@ impl StatsCard {
         let x = 32.0;
 
         if let Some(val) = self.stars_count {
-            lines.push(self.render_line("Stars", val, x, y));
+            lines.push(self.render_line(StatIcon::Stars, "Stars", val, x, y));
             y += y_step;
         }
         if let Some(val) = self.commits_ytd_count {
-            lines.push(self.render_line("Commits YTD", val, x, y));
+            lines.push(self.render_line(StatIcon::Stars, "Commits YTD", val, x, y));
             y += y_step;
         }
         if let Some(val) = self.issues_count {
-            lines.push(self.render_line("Issues", val, x, y));
+            lines.push(self.render_line(StatIcon::Stars, "Issues", val, x, y));
             y += y_step;
         }
         if let Some(val) = self.pull_requests_count {
-            lines.push(self.render_line("Pull Requests", val, x, y));
+            lines.push(self.render_line(StatIcon::Stars, "Pull Requests", val, x, y));
             y += y_step;
         }
         if let Some(val) = self.merge_requests_count {
-            lines.push(self.render_line("Merge Requests", val, x, y));
+            lines.push(self.render_line(StatIcon::Stars, "Merge Requests", val, x, y));
             y += y_step;
         }
         if let Some(val) = self.reviews_count {
-            lines.push(self.render_line("Reviews", val, x, y));
+            lines.push(self.render_line(StatIcon::Stars, "Reviews", val, x, y));
             y += y_step;
         }
         if let Some(val) = self.started_discussions_count {
-            lines.push(self.render_line("Started Discussions", val, x, y));
+            lines.push(self.render_line(StatIcon::Stars, "Started Discussions", val, x, y));
             y += y_step;
         }
         if let Some(val) = self.answered_discussions_count {
-            lines.push(self.render_line("Answered Discussions", val, x, y));
+            lines.push(self.render_line(StatIcon::Stars, "Answered Discussions", val, x, y));
         }
 
         // Calculate card height: top margin + (lines * step) + bottom margin
@@ -96,23 +96,60 @@ impl StatsCard {
         }
     }
 
+    fn load_icon(&self, icon: StatIcon, x: f32, y: f32) -> String {
+        let svg = match icon {
+            StatIcon::Stars => include_str!("../../assets/icons/star.svg"),
+            // Add more matches as needed
+        };
+
+        // Insert x and y attributes into the SVG root element
+        // Assumes the SVG starts with <svg ...>
+        if let Some(idx) = svg.find('>') {
+            let (start, rest) = svg.split_at(idx);
+            format!(
+                "{} x=\"{}\" y=\"{}\" width=\"16\" height=\"16\"{}",
+                start, x, y, rest
+            )
+        } else {
+            svg.to_string()
+        }
+    }
+
     /// Renders the line for the [StatsCard].
-    fn render_line(&self, label: &str, value: u32, pos_x: f32, pos_y: f32) -> String {
-        let pos_x_offset: f32 = 200.0;
+    fn render_line(
+        &self,
+        icon: StatIcon,
+        label: &str,
+        value: u32,
+        pos_x: f32,
+        pos_y: f32,
+    ) -> String {
+        let label_size: f32 = 200.0;
+        let icon_size = 16.0;
+        let icon_offset: f32 = 4.0;
+
+        let pos_x_label = pos_x + icon_size + icon_offset;
+        let pos_x_value = pos_x_label + label_size;
 
         format!(
             r#"<g class="stat_row">
-  <svg class="icon" viewBox="0 0 16 16" width="16" height="16"><!-- TODO: Add icon --></svg>
+  {icon}
   <text x="{pos_x_label}" y="{pos_y}">{label}:</text>
   <text x="{pos_x_value}" y="{pos_y}">{value}</text>
 </g>"#,
-            pos_x_label = pos_x,
+            icon = self.load_icon(icon, pos_x, pos_y - icon_size),
+            pos_x_label = pos_x_label,
             pos_y = pos_y,
             label = label,
-            pos_x_value = pos_x + pos_x_offset,
+            pos_x_value = pos_x_value,
             value = value
         )
     }
+}
+
+enum StatIcon {
+    Stars,
+    // Add more icons as needed
 }
 
 #[cfg(test)]
@@ -126,7 +163,7 @@ mod tests {
         fn basic() {
             let mut card = StatsCard::default();
             card.username = "testuser".to_string();
-            let line = card.render_line("Stars", 42, 10.0, 20.0);
+            let line = card.render_line(StatIcon::Stars, "Stars", 42, 10.0, 20.0);
             assert!(line.contains("<g class=\"stat_row\">"));
             assert!(line.contains(">Stars:</text>"));
             assert!(line.contains(">42</text>"));
