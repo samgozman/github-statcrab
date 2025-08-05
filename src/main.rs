@@ -1,9 +1,15 @@
 mod cards;
 
+use cards::card::CardSettings;
 use cards::stats_card::StatsCard;
 
 fn main() {
     let card = StatsCard {
+        card_settings: CardSettings {
+            offset: 4.0, // TODO: fix offset
+            hide_title: false,
+            hide_background: false,
+        },
         username: "Sam Gozman".to_string(),
         stars_count: Some(123),
         commits_ytd_count: Some(123),

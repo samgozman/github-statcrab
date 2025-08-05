@@ -1,6 +1,7 @@
-use crate::cards::card::SVG;
+use crate::cards::card::{CardSettings, SVG};
 
 pub struct StatsCard {
+    pub card_settings: CardSettings,
     pub username: String,
     pub stars_count: Option<u32>,
     pub commits_ytd_count: Option<u32>,
@@ -15,6 +16,11 @@ pub struct StatsCard {
 impl Default for StatsCard {
     fn default() -> Self {
         StatsCard {
+            card_settings: CardSettings {
+                offset: 0.5,
+                hide_title: false,
+                hide_background: false,
+            },
             username: String::new(),
             stars_count: None,
             commits_ytd_count: None,
@@ -31,36 +37,71 @@ impl Default for StatsCard {
 impl StatsCard {
     /// Renders the [StatsCard] as an [SVG] string.
     pub fn render(&self) -> SVG {
-        use crate::cards::card::{Card, CardSettings};
+        use crate::cards::card::Card;
 
         // Prepare stat lines (label, value, Option)
         let mut lines = Vec::new();
         let mut y = 50.0;
-        let y_step = 32.0;
-        let x = 32.0;
+        let y_step = 28.0;
 
         if let Some(val) = self.stars_count {
-            lines.push(self.render_line(StatIcon::Stars, "Stars", val, x, y));
+            lines.push(self.render_line(
+                StatIcon::Stars,
+                "Stars",
+                val,
+                self.card_settings.offset,
+                y,
+            ));
             y += y_step;
         }
         if let Some(val) = self.commits_ytd_count {
-            lines.push(self.render_line(StatIcon::CommitsYTD, "Commits YTD", val, x, y));
+            lines.push(self.render_line(
+                StatIcon::CommitsYTD,
+                "Commits YTD",
+                val,
+                self.card_settings.offset,
+                y,
+            ));
             y += y_step;
         }
         if let Some(val) = self.issues_count {
-            lines.push(self.render_line(StatIcon::Issues, "Issues", val, x, y));
+            lines.push(self.render_line(
+                StatIcon::Issues,
+                "Issues",
+                val,
+                self.card_settings.offset,
+                y,
+            ));
             y += y_step;
         }
         if let Some(val) = self.pull_requests_count {
-            lines.push(self.render_line(StatIcon::PullRequests, "Pull Requests", val, x, y));
+            lines.push(self.render_line(
+                StatIcon::PullRequests,
+                "Pull Requests",
+                val,
+                self.card_settings.offset,
+                y,
+            ));
             y += y_step;
         }
         if let Some(val) = self.merge_requests_count {
-            lines.push(self.render_line(StatIcon::MergeRequests, "Merge Requests", val, x, y));
+            lines.push(self.render_line(
+                StatIcon::MergeRequests,
+                "Merge Requests",
+                val,
+                self.card_settings.offset,
+                y,
+            ));
             y += y_step;
         }
         if let Some(val) = self.reviews_count {
-            lines.push(self.render_line(StatIcon::Reviews, "Reviews", val, x, y));
+            lines.push(self.render_line(
+                StatIcon::Reviews,
+                "Reviews",
+                val,
+                self.card_settings.offset,
+                y,
+            ));
             y += y_step;
         }
         if let Some(val) = self.started_discussions_count {
@@ -68,7 +109,7 @@ impl StatsCard {
                 StatIcon::StartedDiscussions,
                 "Started Discussions",
                 val,
-                x,
+                self.card_settings.offset,
                 y,
             ));
             y += y_step;
@@ -78,14 +119,14 @@ impl StatsCard {
                 StatIcon::AnsweredDiscussions,
                 "Answered Discussions",
                 val,
-                x,
+                self.card_settings.offset,
                 y,
             ));
         }
 
         // Calculate card height: top margin + (lines * step) + bottom margin
         let line_count = lines.len().max(1);
-        let height = 40 + (line_count as u32) * (y_step as u32) + 40;
+        let height = 40 + (line_count as u32) * (y_step as u32);
         let width = 380;
 
         let body = lines.join("\n");
@@ -96,11 +137,7 @@ impl StatsCard {
             format!("@{}'s GitHub Stats", self.username),
             String::from("GitHub statistics summary"),
             body,
-            CardSettings {
-                offset: 4.0,
-                hide_title: false,
-                hide_background: false,
-            },
+            self.card_settings.clone(),
         );
         match card {
             Ok(card) => card.render(),

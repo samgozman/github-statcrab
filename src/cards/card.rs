@@ -11,6 +11,16 @@ pub struct CardSettings {
     pub hide_background: bool,
 }
 
+impl Clone for CardSettings {
+    fn clone(&self) -> Self {
+        CardSettings {
+            offset: self.offset,
+            hide_title: self.hide_title,
+            hide_background: self.hide_background,
+        }
+    }
+}
+
 /// Card represents a card with a width, height, and title. Its a base wrapper for cards of different types.
 /// It provides a method to create a new card and render it as an [SVG] string.
 pub struct Card {
@@ -79,7 +89,7 @@ impl Card {
   <desc id="description-id">{description}</desc>
   {rendered_background}
   {rendered_title}
-  <g class="body">
+  <g class="body" x="0" y="0">
 {body}
   </g>
 </svg>
@@ -155,8 +165,8 @@ impl Card {
         let font_size = 18;
 
         format!(
-            r#"<text x="{}" y="{}" class="title">{}</text>"#,
-            self.settings.offset * 10.0,
+            r#"<g transform="translate({}, {})"><text x="0" y="0" class="title">{}</text></g>"#,
+            self.settings.offset,
             font_size as f32 + self.settings.offset,
             self.title
         )
