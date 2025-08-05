@@ -44,31 +44,43 @@ impl StatsCard {
             y += y_step;
         }
         if let Some(val) = self.commits_ytd_count {
-            lines.push(self.render_line(StatIcon::Stars, "Commits YTD", val, x, y));
+            lines.push(self.render_line(StatIcon::CommitsYTD, "Commits YTD", val, x, y));
             y += y_step;
         }
         if let Some(val) = self.issues_count {
-            lines.push(self.render_line(StatIcon::Stars, "Issues", val, x, y));
+            lines.push(self.render_line(StatIcon::Issues, "Issues", val, x, y));
             y += y_step;
         }
         if let Some(val) = self.pull_requests_count {
-            lines.push(self.render_line(StatIcon::Stars, "Pull Requests", val, x, y));
+            lines.push(self.render_line(StatIcon::PullRequests, "Pull Requests", val, x, y));
             y += y_step;
         }
         if let Some(val) = self.merge_requests_count {
-            lines.push(self.render_line(StatIcon::Stars, "Merge Requests", val, x, y));
+            lines.push(self.render_line(StatIcon::MergeRequests, "Merge Requests", val, x, y));
             y += y_step;
         }
         if let Some(val) = self.reviews_count {
-            lines.push(self.render_line(StatIcon::Stars, "Reviews", val, x, y));
+            lines.push(self.render_line(StatIcon::Reviews, "Reviews", val, x, y));
             y += y_step;
         }
         if let Some(val) = self.started_discussions_count {
-            lines.push(self.render_line(StatIcon::Stars, "Started Discussions", val, x, y));
+            lines.push(self.render_line(
+                StatIcon::StartedDiscussions,
+                "Started Discussions",
+                val,
+                x,
+                y,
+            ));
             y += y_step;
         }
         if let Some(val) = self.answered_discussions_count {
-            lines.push(self.render_line(StatIcon::Stars, "Answered Discussions", val, x, y));
+            lines.push(self.render_line(
+                StatIcon::AnsweredDiscussions,
+                "Answered Discussions",
+                val,
+                x,
+                y,
+            ));
         }
 
         // Calculate card height: top margin + (lines * step) + bottom margin
@@ -99,7 +111,13 @@ impl StatsCard {
     fn load_icon(&self, icon: StatIcon, x: f32, y: f32) -> String {
         let svg = match icon {
             StatIcon::Stars => include_str!("../../assets/icons/star.svg"),
-            // Add more matches as needed
+            StatIcon::CommitsYTD => include_str!("../../assets/icons/clock-rotate-left.svg"),
+            StatIcon::PullRequests => include_str!("../../assets/icons/code-pull-request.svg"),
+            StatIcon::Issues => include_str!("../../assets/icons/circle-exclamation.svg"),
+            StatIcon::MergeRequests => include_str!("../../assets/icons/code-merge.svg"),
+            StatIcon::Reviews => include_str!("../../assets/icons/eye.svg"),
+            StatIcon::StartedDiscussions => include_str!("../../assets/icons/messages.svg"),
+            StatIcon::AnsweredDiscussions => include_str!("../../assets/icons/message-check.svg"),
         };
 
         // Insert x and y attributes into the SVG root element
@@ -149,7 +167,13 @@ impl StatsCard {
 
 enum StatIcon {
     Stars,
-    // Add more icons as needed
+    CommitsYTD,
+    PullRequests,
+    Issues,
+    MergeRequests,
+    Reviews,
+    StartedDiscussions,
+    AnsweredDiscussions,
 }
 
 #[cfg(test)]
