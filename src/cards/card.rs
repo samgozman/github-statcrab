@@ -3,8 +3,10 @@ pub type SVG = String;
 
 /// CardSettings holds unique settings for the [Card].
 pub struct CardSettings {
-    /// Offset (pixels) is used to adjust the position of the [Card] in the SVG relative to its container.
-    pub offset: f32,
+    /// Offset X (pixels) is used to offset the position of the [Card] in the SVG relative to its container by X axis.
+    pub offset_x: u32,
+    /// Offset Y (pixels) is used to offset the position of the [Card] in the SVG relative to its container by Y axis.
+    pub offset_y: u32,
     /// Hide title title of the [Card].
     pub hide_title: bool,
     /// Hide background of the [Card].
@@ -14,7 +16,8 @@ pub struct CardSettings {
 impl Clone for CardSettings {
     fn clone(&self) -> Self {
         CardSettings {
-            offset: self.offset,
+            offset_x: self.offset_x,
+            offset_y: self.offset_y,
             hide_title: self.hide_title,
             hide_background: self.hide_background,
         }
@@ -35,6 +38,8 @@ pub struct Card {
 }
 
 impl Card {
+    pub const TITLE_FONT_SIZE: u32 = 18;
+
     /// Creates a new [Card] with the specified parameters.
     pub fn new(
         width: u32,
@@ -119,27 +124,22 @@ impl Card {
                 self.height
             ));
         }
-        let max_offset_w = self.width as f32 * 0.3;
-        let max_offset_h = self.height as f32 * 0.3;
-        if self.settings.offset > max_offset_w || self.settings.offset > max_offset_h {
+        let max_offset_w = (self.width as f32 * 0.3) as u32;
+        let max_offset_h = (self.height as f32 * 0.3) as u32;
+        if self.settings.offset_x > max_offset_w || self.settings.offset_y > max_offset_h {
             return Err(format!(
-                "Card offset must not exceed 30% of width or height (max: {}, {}), got {}",
-                max_offset_w, max_offset_h, self.settings.offset
+                "Card offset must not exceed 30% of width or height (max: {}, {}), got x:{} y:{}",
+                max_offset_w, max_offset_h, self.settings.offset_x, self.settings.offset_y
             ));
         }
 
-        if self.settings.offset < 0.0 {
-            return Err("Card offset must be non-negative".to_string());
-        }
-
-        if self.settings.offset >= self.width as f32 / 2.0
-            || self.settings.offset >= self.height as f32 / 2.0
-        {
+        if self.settings.offset_x >= self.width / 2 || self.settings.offset_y >= self.height / 2 {
             return Err(format!(
-                "Card offset must be less than half of width and height (max: {}, {}), got {}",
+                "Card offset must be less than half of width and height (max: {}, {}), got x:{} y:{}",
                 self.width as f32 / 2.0,
                 self.height as f32 / 2.0,
-                self.settings.offset
+                self.settings.offset_x,
+                self.settings.offset_y
             ));
         }
         Ok(())
@@ -162,23 +162,23 @@ impl Card {
 
     /// Renders the title of the [Card] as an SVG text element.
     fn render_title(&self) -> String {
-        let font_size = 18;
-
         format!(
             r#"<g transform="translate({}, {})"><text x="0" y="0" class="title">{}</text></g>"#,
-            self.settings.offset,
-            font_size as f32 + self.settings.offset,
+            self.settings.offset_x,
+            Self::TITLE_FONT_SIZE + self.settings.offset_y,
             self.title
         )
     }
 
     fn render_background(&self) -> String {
+        let stroke_offset: f32 = 0.5;
+
         format!(
             r#"<rect x="{pos_x}" y="{pos_y}" rx="5" width="{width}" height="{height}" stroke="{stroke_color}" fill="{fill_color}" stroke-opacity="{stroke_opacity}"/>"#,
-            pos_x = self.settings.offset,
-            pos_y = self.settings.offset,
-            width = self.width as f32 - self.settings.offset * 2.0,
-            height = self.height as f32 - self.settings.offset * 2.0,
+            pos_x = stroke_offset,
+            pos_y = stroke_offset,
+            width = self.width as f32 - stroke_offset * 2.0,
+            height = self.height as f32 - stroke_offset * 2.0,
             fill_color = "#ffffff00",
             stroke_color = "#e6e1e1ff",
             stroke_opacity = "1",
@@ -202,7 +202,8 @@ mod tests {
                 "Test Desc".to_string(),
                 "Test Body".to_string(),
                 CardSettings {
-                    offset: 10.0,
+                    offset_x: 10,
+                    offset_y: 10,
                     hide_title: false,
                     hide_background: false,
                 },
@@ -224,7 +225,8 @@ mod tests {
                 "Test Desc".to_string(),
                 "Test Body".to_string(),
                 CardSettings {
-                    offset: 10.0,
+                    offset_x: 10,
+                    offset_y: 10,
                     hide_title: false,
                     hide_background: false,
                 },
@@ -241,7 +243,8 @@ mod tests {
                 "Test Desc".to_string(),
                 "Test Body".to_string(),
                 CardSettings {
-                    offset: 10.0,
+                    offset_x: 10,
+                    offset_y: 10,
                     hide_title: false,
                     hide_background: false,
                 },
@@ -258,24 +261,8 @@ mod tests {
                 "Test Desc".to_string(),
                 "Test Body".to_string(),
                 CardSettings {
-                    offset: 50.0,
-                    hide_title: false,
-                    hide_background: false,
-                },
-            );
-            assert!(card.is_err());
-        }
-
-        #[test]
-        fn test_card_creation_negative_offset() {
-            let card = Card::new(
-                100,
-                120,
-                "Test Card".to_string(),
-                "Test Desc".to_string(),
-                "Test Body".to_string(),
-                CardSettings {
-                    offset: -10.0,
+                    offset_x: 50,
+                    offset_y: 10,
                     hide_title: false,
                     hide_background: false,
                 },
@@ -292,7 +279,8 @@ mod tests {
                 "Test Desc".to_string(),
                 "Test Body".to_string(),
                 CardSettings {
-                    offset: 60.0,
+                    offset_x: 60,
+                    offset_y: 10,
                     hide_title: false,
                     hide_background: false,
                 },
@@ -323,7 +311,8 @@ mod tests {
                 "".to_string(),
                 "".to_string(),
                 CardSettings {
-                    offset: 0.5,
+                    offset_x: 1,
+                    offset_y: 1,
                     hide_title: false,
                     hide_background: false,
                 },
@@ -347,7 +336,8 @@ mod tests {
                 "Test Desc".to_string(),
                 "Test Body".to_string(),
                 CardSettings {
-                    offset: 0.5,
+                    offset_x: 1,
+                    offset_y: 1,
                     hide_title: true,
                     hide_background: false,
                 },
@@ -369,7 +359,8 @@ mod tests {
                 "Test Desc".to_string(),
                 "Test Body".to_string(),
                 CardSettings {
-                    offset: 0.5,
+                    offset_x: 1,
+                    offset_y: 1,
                     hide_title: false,
                     hide_background: true,
                 },
@@ -391,7 +382,8 @@ mod tests {
                 "Test Desc".to_string(),
                 "Test Body".to_string(),
                 CardSettings {
-                    offset: 0.5,
+                    offset_x: 1,
+                    offset_y: 1,
                     hide_title: true,
                     hide_background: true,
                 },
@@ -418,7 +410,8 @@ mod tests {
                 "SVG Description".to_string(),
                 "<rect width=\"100\" height=\"200\" fill=\"#fff\"/>".to_string(),
                 CardSettings {
-                    offset: 0.5,
+                    offset_x: 1,
+                    offset_y: 1,
                     hide_title: false,
                     hide_background: false,
                 },

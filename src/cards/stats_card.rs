@@ -17,7 +17,8 @@ impl Default for StatsCard {
     fn default() -> Self {
         StatsCard {
             card_settings: CardSettings {
-                offset: 0.5,
+                offset_x: 1,
+                offset_y: 1,
                 hide_title: false,
                 hide_background: false,
             },
@@ -35,99 +36,113 @@ impl Default for StatsCard {
 }
 
 impl StatsCard {
+    // Constants for rendering the card (in pixels).
+    const VALUE_SIZE: u32 = 27;
+    const LABEL_SIZE: u32 = 220;
+    const ICON_SIZE: u32 = 16;
+    const ICON_OFFSET: u32 = 8;
+    const TITLE_BODY_OFFSET: u32 = 1;
+    const ROW_Y_STEP: u32 = 28;
+
     /// Renders the [StatsCard] as an [SVG] string.
     pub fn render(&self) -> SVG {
         use crate::cards::card::Card;
 
         // Prepare stat lines (label, value, Option)
         let mut lines = Vec::new();
-        let mut y = 50.0;
-        let y_step = 28.0;
+        let header_size_y = Card::TITLE_FONT_SIZE + Self::TITLE_BODY_OFFSET;
+
+        let mut y: u32 = header_size_y + Self::ROW_Y_STEP + self.card_settings.offset_y;
 
         if let Some(val) = self.stars_count {
             lines.push(self.render_line(
                 StatIcon::Stars,
                 "Stars",
                 val,
-                self.card_settings.offset,
+                self.card_settings.offset_x,
                 y,
             ));
-            y += y_step;
+            y += Self::ROW_Y_STEP;
         }
         if let Some(val) = self.commits_ytd_count {
             lines.push(self.render_line(
                 StatIcon::CommitsYTD,
                 "Commits YTD",
                 val,
-                self.card_settings.offset,
+                self.card_settings.offset_x,
                 y,
             ));
-            y += y_step;
+            y += Self::ROW_Y_STEP;
         }
         if let Some(val) = self.issues_count {
             lines.push(self.render_line(
                 StatIcon::Issues,
                 "Issues",
                 val,
-                self.card_settings.offset,
+                self.card_settings.offset_x,
                 y,
             ));
-            y += y_step;
+            y += Self::ROW_Y_STEP;
         }
         if let Some(val) = self.pull_requests_count {
             lines.push(self.render_line(
                 StatIcon::PullRequests,
                 "Pull Requests",
                 val,
-                self.card_settings.offset,
+                self.card_settings.offset_x,
                 y,
             ));
-            y += y_step;
+            y += Self::ROW_Y_STEP;
         }
         if let Some(val) = self.merge_requests_count {
             lines.push(self.render_line(
                 StatIcon::MergeRequests,
                 "Merge Requests",
                 val,
-                self.card_settings.offset,
+                self.card_settings.offset_x,
                 y,
             ));
-            y += y_step;
+            y += Self::ROW_Y_STEP;
         }
         if let Some(val) = self.reviews_count {
             lines.push(self.render_line(
                 StatIcon::Reviews,
                 "Reviews",
                 val,
-                self.card_settings.offset,
+                self.card_settings.offset_x,
                 y,
             ));
-            y += y_step;
+            y += Self::ROW_Y_STEP;
         }
         if let Some(val) = self.started_discussions_count {
             lines.push(self.render_line(
                 StatIcon::StartedDiscussions,
                 "Started Discussions",
                 val,
-                self.card_settings.offset,
+                self.card_settings.offset_x,
                 y,
             ));
-            y += y_step;
+            y += Self::ROW_Y_STEP;
         }
         if let Some(val) = self.answered_discussions_count {
             lines.push(self.render_line(
                 StatIcon::AnsweredDiscussions,
                 "Answered Discussions",
                 val,
-                self.card_settings.offset,
+                self.card_settings.offset_x,
                 y,
             ));
         }
 
         // Calculate card height: top margin + (lines * step) + bottom margin
-        let line_count = lines.len().max(1);
-        let height = 40 + (line_count as u32) * (y_step as u32);
-        let width = 380;
+        let line_count = lines.len().max(1) as u32;
+        let height =
+            header_size_y + line_count * Self::ROW_Y_STEP + self.card_settings.offset_y * 2;
+        let width: u32 = Self::LABEL_SIZE
+            + Self::ICON_SIZE
+            + Self::ICON_OFFSET
+            + Self::VALUE_SIZE
+            + self.card_settings.offset_x * 2;
 
         let body = lines.join("\n");
 
@@ -145,7 +160,7 @@ impl StatsCard {
         }
     }
 
-    fn load_icon(&self, icon: StatIcon, x: f32, y: f32) -> String {
+    fn load_icon(&self, icon: StatIcon, x: u32, y: u32) -> String {
         let svg = match icon {
             StatIcon::Stars => include_str!("../../assets/icons/star.svg"),
             StatIcon::CommitsYTD => include_str!("../../assets/icons/clock-rotate-left.svg"),
@@ -176,15 +191,11 @@ impl StatsCard {
         icon: StatIcon,
         label: &str,
         value: u32,
-        pos_x: f32,
-        pos_y: f32,
+        pos_x: u32,
+        pos_y: u32,
     ) -> String {
-        let label_size: f32 = 200.0;
-        let icon_size = 16.0;
-        let icon_offset: f32 = 4.0;
-
-        let pos_x_label = pos_x + icon_size + icon_offset;
-        let pos_x_value = pos_x_label + label_size;
+        let pos_x_label = pos_x + Self::ICON_SIZE + Self::ICON_OFFSET;
+        let pos_x_value = pos_x_label + Self::LABEL_SIZE;
 
         format!(
             r#"<g class="stat_row">
@@ -192,7 +203,7 @@ impl StatsCard {
   <text x="{pos_x_label}" y="{pos_y}">{label}:</text>
   <text x="{pos_x_value}" y="{pos_y}">{value}</text>
 </g>"#,
-            icon = self.load_icon(icon, pos_x, pos_y - icon_size),
+            icon = self.load_icon(icon, pos_x, pos_y - Self::ICON_SIZE),
             pos_x_label = pos_x_label,
             pos_y = pos_y,
             label = label,
@@ -224,7 +235,7 @@ mod tests {
         fn basic() {
             let mut card = StatsCard::default();
             card.username = "testuser".to_string();
-            let line = card.render_line(StatIcon::Stars, "Stars", 42, 10.0, 20.0);
+            let line = card.render_line(StatIcon::Stars, "Stars", 42, 10, 20);
             assert!(line.contains("<g class=\"stat_row\">"));
             assert!(line.contains(">Stars:</text>"));
             assert!(line.contains(">42</text>"));

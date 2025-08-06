@@ -6,7 +6,8 @@ use cards::stats_card::StatsCard;
 fn main() {
     let card = StatsCard {
         card_settings: CardSettings {
-            offset: 4.0, // TODO: fix offset
+            offset_x: 12,
+            offset_y: 12,
             hide_title: false,
             hide_background: false,
         },
