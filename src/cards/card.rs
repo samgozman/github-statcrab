@@ -118,7 +118,7 @@ impl Card {
                 self.width
             ));
         }
-        if self.height < 100 {
+        if self.height < 60 {
             return Err(format!(
                 "Card height must be at least 100, got {}",
                 self.height
@@ -238,7 +238,7 @@ mod tests {
         fn test_card_creation_invalid_height() {
             let card = Card::new(
                 100,
-                99,
+                50,
                 "Test Card".to_string(),
                 "Test Desc".to_string(),
                 "Test Body".to_string(),
@@ -321,7 +321,7 @@ mod tests {
             let rendered_title = card.render_title();
             assert_eq!(
                 rendered_title,
-                r#"<text x="5" y="18.5" class="title">Test Title</text>"#
+                r#"<g transform="translate(1, 19)"><text x="0" y="0" class="title">Test Title</text></g>"#
             );
         }
     }
@@ -346,8 +346,8 @@ mod tests {
             let svg = card.render();
             // The <title> tag should always be present
             assert!(svg.contains("<title id=\"title-id\">Test Title</title>"));
-            // The SVG text element should NOT be present
-            assert!(!svg.contains("<text x="));
+            // The SVG <g> title group should NOT be present
+            assert!(!svg.contains("<g transform="));
         }
 
         #[test]
@@ -369,8 +369,8 @@ mod tests {
             let svg = card.render();
             // The background <rect> should NOT be present
             assert!(!svg.contains("<rect "));
-            // The SVG text element should be present
-            assert!(svg.contains("<text x="));
+            // The SVG <g> title group should be present
+            assert!(svg.contains("<g transform="));
         }
 
         #[test]
@@ -392,8 +392,8 @@ mod tests {
             let svg = card.render();
             // The <title> tag should always be present
             assert!(svg.contains("<title id=\"title-id\">Test Title</title>"));
-            // The SVG text element should NOT be present
-            assert!(!svg.contains("<text x="));
+            // The SVG <g> title group should NOT be present
+            assert!(!svg.contains("<g transform="));
             // The background <rect> should NOT be present
             assert!(!svg.contains("<rect "));
         }

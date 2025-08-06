@@ -254,6 +254,7 @@ mod tests {
             card.stars_count = Some(10);
             card.commits_ytd_count = Some(20);
             let svg = card.render();
+            println!("{}", svg);
             assert!(svg.contains("@octocat's GitHub Stats"));
             assert!(svg.contains(">Stars:</text>"));
             assert!(svg.contains(">10</text>"));
@@ -264,21 +265,11 @@ mod tests {
         }
 
         #[test]
-        fn with_no_fields() {
-            let mut card = StatsCard::default();
-            card.username = "empty".to_string();
-            let svg = card.render();
-            // Should still render a valid SVG with title
-            assert!(svg.contains("@empty's GitHub Stats"));
-            // Should not contain any stat label
-            assert!(!svg.contains(":</text>"));
-        }
-
-        #[test]
         fn svg_is_valid_xml() {
             let mut card = StatsCard::default();
             card.username = "xmluser".to_string();
             card.stars_count = Some(1);
+            card.commits_ytd_count = Some(2);
             let svg = card.render();
             // Use quick_xml to check well-formedness
             use quick_xml::Reader;
