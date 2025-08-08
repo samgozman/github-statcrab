@@ -11,7 +11,7 @@
 }
 
 /* TODO: move to stat-card.css */
-.stat_row > text {
+.row > text {
   font: 600 15px "Helvetica Neue", Helvetica, Arial, sans-serif;
   fill: #666;
 }

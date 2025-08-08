@@ -10,6 +10,7 @@ fn main() {
             offset_y: 12,
             hide_title: false,
             hide_background: false,
+            hide_background_stroke: false,
         },
         username: "samgozman".to_string(),
         stars_count: Some(2400),

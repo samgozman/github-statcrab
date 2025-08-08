@@ -11,6 +11,8 @@ pub struct CardSettings {
     pub hide_title: bool,
     /// Hide background of the [Card].
     pub hide_background: bool,
+    /// Hide stroke (outline) of background rectangle while preserving layout.
+    pub hide_background_stroke: bool,
 }
 
 impl Clone for CardSettings {
@@ -20,6 +22,7 @@ impl Clone for CardSettings {
             offset_y: self.offset_y,
             hide_title: self.hide_title,
             hide_background: self.hide_background,
+            hide_background_stroke: self.hide_background_stroke,
         }
     }
 }
@@ -171,7 +174,17 @@ impl Card {
     }
 
     fn render_background(&self) -> String {
-        let stroke_offset: f32 = 0.5;
+        // If stroke hidden – remove half-pixel inset so fill spans full size.
+        let stroke_offset: f32 = if self.settings.hide_background_stroke {
+            0.0
+        } else {
+            0.5
+        };
+        let stroke_opacity = if self.settings.hide_background_stroke {
+            "0"
+        } else {
+            "1"
+        };
 
         format!(
             r#"<rect x="{pos_x}" y="{pos_y}" rx="5" width="{width}" height="{height}" stroke="{stroke_color}" fill="{fill_color}" stroke-opacity="{stroke_opacity}"/>"#,
@@ -181,7 +194,7 @@ impl Card {
             height = self.height as f32 - stroke_offset * 2.0,
             fill_color = "#ffffff00",
             stroke_color = "#e6e1e1ff",
-            stroke_opacity = "1",
+            stroke_opacity = stroke_opacity,
         )
     }
 }
@@ -206,6 +219,7 @@ mod tests {
                     offset_y: 10,
                     hide_title: false,
                     hide_background: false,
+                    hide_background_stroke: false,
                 },
             )
             .expect("Card should be valid");
@@ -229,6 +243,7 @@ mod tests {
                     offset_y: 10,
                     hide_title: false,
                     hide_background: false,
+                    hide_background_stroke: false,
                 },
             );
             assert!(card.is_err());
@@ -247,6 +262,7 @@ mod tests {
                     offset_y: 10,
                     hide_title: false,
                     hide_background: false,
+                    hide_background_stroke: false,
                 },
             );
             assert!(card.is_err());
@@ -265,6 +281,7 @@ mod tests {
                     offset_y: 10,
                     hide_title: false,
                     hide_background: false,
+                    hide_background_stroke: false,
                 },
             );
             assert!(card.is_err());
@@ -283,6 +300,7 @@ mod tests {
                     offset_y: 10,
                     hide_title: false,
                     hide_background: false,
+                    hide_background_stroke: false,
                 },
             );
             assert!(card.is_err());
@@ -315,6 +333,7 @@ mod tests {
                     offset_y: 1,
                     hide_title: false,
                     hide_background: false,
+                    hide_background_stroke: false,
                 },
             )
             .unwrap();
@@ -327,6 +346,51 @@ mod tests {
     }
 
     mod fn_render {
+        use super::*;
+
+        #[test]
+        fn test_render_background_stroke_visible() {
+            let card = Card::new(
+                120,
+                80,
+                "Title".to_string(),
+                "Desc".to_string(),
+                "Body".to_string(),
+                CardSettings {
+                    offset_x: 1,
+                    offset_y: 1,
+                    hide_title: true,
+                    hide_background: false,
+                    hide_background_stroke: false,
+                },
+            )
+            .unwrap();
+            let svg = card.render();
+            assert!(svg.contains("stroke-opacity=\"1\""));
+            assert!(svg.contains("x=\"0.5\" y=\"0.5\""));
+        }
+
+        #[test]
+        fn test_render_background_stroke_hidden() {
+            let card = Card::new(
+                120,
+                80,
+                "Title".to_string(),
+                "Desc".to_string(),
+                "Body".to_string(),
+                CardSettings {
+                    offset_x: 1,
+                    offset_y: 1,
+                    hide_title: true,
+                    hide_background: false,
+                    hide_background_stroke: true,
+                },
+            )
+            .unwrap();
+            let svg = card.render();
+            assert!(svg.contains("stroke-opacity=\"0\""));
+            assert!(svg.contains("x=\"0\" y=\"0\""));
+        }
         #[test]
         fn test_render_hides_title_svg_text() {
             let card = Card::new(
@@ -340,6 +404,7 @@ mod tests {
                     offset_y: 1,
                     hide_title: true,
                     hide_background: false,
+                    hide_background_stroke: false,
                 },
             )
             .unwrap();
@@ -363,6 +428,7 @@ mod tests {
                     offset_y: 1,
                     hide_title: false,
                     hide_background: true,
+                    hide_background_stroke: false,
                 },
             )
             .unwrap();
@@ -386,6 +452,7 @@ mod tests {
                     offset_y: 1,
                     hide_title: true,
                     hide_background: true,
+                    hide_background_stroke: false,
                 },
             )
             .unwrap();
@@ -397,7 +464,7 @@ mod tests {
             // The background <rect> should NOT be present
             assert!(!svg.contains("<rect "));
         }
-        use super::*;
+
         use quick_xml::Reader;
         use quick_xml::events::Event;
 
@@ -414,6 +481,7 @@ mod tests {
                     offset_y: 1,
                     hide_title: false,
                     hide_background: false,
+                    hide_background_stroke: false,
                 },
             )
             .unwrap();

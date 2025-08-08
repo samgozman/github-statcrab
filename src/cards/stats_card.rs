@@ -21,6 +21,7 @@ impl Default for StatsCard {
                 offset_y: 1,
                 hide_title: false,
                 hide_background: false,
+                hide_background_stroke: false,
             },
             username: String::new(),
             stars_count: None,
@@ -249,7 +250,7 @@ impl StatsCard {
         let pos_x_value = pos_x_label + Self::LABEL_SIZE;
 
         format!(
-            r#"<g class="stat_row">
+            r#"<g class="row">
   {icon}
   <text x="{pos_x_label}" y="{pos_y}">{label}:</text>
   <text x="{pos_x_value}" y="{pos_y}">{value}</text>
@@ -287,7 +288,7 @@ mod tests {
             let mut card = StatsCard::default();
             card.username = "testuser".to_string();
             let line = card.render_line(StatIcon::Stars, "Stars", 42, 10, 20);
-            assert!(line.contains("<g class=\"stat_row\">"));
+            assert!(line.contains("<g class=\"row\">"));
             assert!(line.contains(">Stars:</text>"));
             assert!(line.contains(">42</text>")); // unchanged for small numbers
             assert!(line.contains("x=\"10"));
