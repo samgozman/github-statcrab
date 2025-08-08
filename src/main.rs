@@ -12,7 +12,7 @@ fn main() {
             hide_background: false,
         },
         username: "Sam Gozman".to_string(),
-        stars_count: Some(123),
+        stars_count: Some(2400),
         commits_ytd_count: Some(123),
         issues_count: Some(123),
         pull_requests_count: Some(123),

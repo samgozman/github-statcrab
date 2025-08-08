@@ -37,7 +37,7 @@ impl Default for StatsCard {
 
 impl StatsCard {
     // Constants for rendering the card (in pixels).
-    const VALUE_SIZE: u32 = 27;
+    const VALUE_SIZE: u32 = 31;
     const LABEL_SIZE: u32 = 220;
     const ICON_SIZE: u32 = 16;
     const ICON_OFFSET: u32 = 8;
@@ -160,6 +160,28 @@ impl StatsCard {
         }
     }
 
+    /// Format a numeric value into a shortened human form.
+    /// Rules:
+    /// - < 1_000 -> plain number (e.g. 999)
+    /// - 1_000 ..= 9_999 -> one decimal (floor) unless the decimal would be 0 (e.g. 1k, 1.5k, 9.9k)
+    /// - >= 10_000 -> whole thousands with trailing 'k' (e.g. 10k, 11k, 15234 -> 15k)
+    fn format_value(&self, value: u32) -> String {
+        if value < 1_000 {
+            return value.to_string();
+        }
+        if value < 10_000 {
+            let thousands = value / 1_000; // 1..=9
+            let tenths = (value % 1_000) / 100; // 0..=9 (floor)
+            if tenths == 0 {
+                format!("{thousands}k")
+            } else {
+                format!("{thousands}.{tenths}k")
+            }
+        } else {
+            format!("{}k", value / 1_000)
+        }
+    }
+
     fn load_icon(&self, icon: StatIcon, x: u32, y: u32) -> String {
         let svg = match icon {
             StatIcon::Stars => include_str!("../../assets/icons/star.svg"),
@@ -203,12 +225,12 @@ impl StatsCard {
   <text x="{pos_x_label}" y="{pos_y}">{label}:</text>
   <text x="{pos_x_value}" y="{pos_y}">{value}</text>
 </g>"#,
-            icon = self.load_icon(icon, pos_x, pos_y - Self::ICON_SIZE),
+            icon = self.load_icon(icon, pos_x, pos_y.saturating_sub(Self::ICON_SIZE)),
             pos_x_label = pos_x_label,
             pos_y = pos_y,
             label = label,
             pos_x_value = pos_x_value,
-            value = value
+            value = self.format_value(value)
         )
     }
 }
@@ -238,9 +260,23 @@ mod tests {
             let line = card.render_line(StatIcon::Stars, "Stars", 42, 10, 20);
             assert!(line.contains("<g class=\"stat_row\">"));
             assert!(line.contains(">Stars:</text>"));
-            assert!(line.contains(">42</text>"));
+            assert!(line.contains(">42</text>")); // unchanged for small numbers
             assert!(line.contains("x=\"10"));
             assert!(line.contains("y=\"20"));
+        }
+
+        #[test]
+        fn formatted_thousands_decimal() {
+            let card = StatsCard::default();
+            let line = card.render_line(StatIcon::Stars, "Stars", 1_500, 0, 0);
+            assert!(line.contains(">1.5k</text>"));
+        }
+
+        #[test]
+        fn formatted_ten_thousands_whole() {
+            let card = StatsCard::default();
+            let line = card.render_line(StatIcon::Stars, "Stars", 15_234, 0, 0);
+            assert!(line.contains(">15k</text>"));
         }
     }
 
@@ -289,6 +325,46 @@ mod tests {
                 buf.clear();
             }
             assert!(found_svg, "SVG root element not found");
+        }
+    }
+
+    mod fn_format_value {
+        use super::*;
+
+        #[test]
+        fn under_thousand() {
+            let card = StatsCard::default();
+            assert_eq!(card.format_value(999), "999");
+        }
+
+        #[test]
+        fn one_thousand_exact() {
+            let card = StatsCard::default();
+            assert_eq!(card.format_value(1_000), "1k");
+        }
+
+        #[test]
+        fn one_thousand_with_decimal() {
+            let card = StatsCard::default();
+            assert_eq!(card.format_value(1_500), "1.5k");
+        }
+
+        #[test]
+        fn one_thousand_nine_hundred() {
+            let card = StatsCard::default();
+            assert_eq!(card.format_value(1_999), "1.9k");
+        }
+
+        #[test]
+        fn ten_thousand_exact() {
+            let card = StatsCard::default();
+            assert_eq!(card.format_value(10_000), "10k");
+        }
+
+        #[test]
+        fn over_ten_thousand_floor() {
+            let card = StatsCard::default();
+            assert_eq!(card.format_value(15_234), "15k");
         }
     }
 }
