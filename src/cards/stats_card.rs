@@ -37,12 +37,13 @@ impl Default for StatsCard {
 
 impl StatsCard {
     // Constants for rendering the card (in pixels).
+    const MAX_USERNAME_LEN: usize = 13;
     const VALUE_SIZE: u32 = 31;
     const LABEL_SIZE: u32 = 220;
-    const ICON_SIZE: u32 = 16;
+    const ICON_SIZE: u32 = 15;
     const ICON_OFFSET: u32 = 8;
     const TITLE_BODY_OFFSET: u32 = 1;
-    const ROW_Y_STEP: u32 = 28;
+    const ROW_Y_STEP: u32 = 27;
 
     /// Renders the [StatsCard] as an [SVG] string.
     pub fn render(&self) -> SVG {
@@ -166,10 +167,18 @@ impl StatsCard {
 
         let body = lines.join("\n");
 
+        // Build title respecting username length limit.
+        let display_title =
+            if self.username.is_empty() || self.username.len() > Self::MAX_USERNAME_LEN {
+                "GitHub Stats".to_string()
+            } else {
+                format!("@{}: GitHub Stats", self.username)
+            };
+
         let card = Card::new(
             width,
             height,
-            format!("@{}'s GitHub Stats", self.username),
+            display_title,
             String::from("GitHub statistics summary"),
             body,
             self.card_settings.clone(),
@@ -310,14 +319,26 @@ mod tests {
             card.stars_count = Some(10);
             card.commits_ytd_count = Some(20);
             let svg = card.render();
-            println!("{}", svg);
-            assert!(svg.contains("@octocat's GitHub Stats"));
+            assert!(svg.contains("@octocat: GitHub Stats"));
             assert!(svg.contains(">Stars:</text>"));
             assert!(svg.contains(">10</text>"));
             assert!(svg.contains(">Commits YTD:</text>"));
             assert!(svg.contains(">20</text>"));
             // Should not contain other stat labels
             assert!(!svg.contains(">Issues:</text>"));
+        }
+
+        #[test]
+        fn with_username_longer_than_limit() {
+            let mut card = StatsCard::default();
+            card.username = "averylongusername".to_string();
+            card.stars_count = Some(10);
+            card.commits_ytd_count = Some(20);
+            let svg = card.render();
+            // Should use default title instead of username
+            assert!(svg.contains("GitHub Stats"));
+            // Should not contain username in title
+            assert!(!svg.contains("@averylongusername"));
         }
 
         #[test]

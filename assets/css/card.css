@@ -6,13 +6,13 @@
 /* TODO: define fill colors in themes */
 /* TODO: think on light and dark theme colors */
 .title {
-  font: 800 18px "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font: 800 17px "Helvetica Neue", Helvetica, Arial, sans-serif;
   fill: #333;
 }
 
 /* TODO: move to stat-card.css */
 .stat_row > text {
-  font: 600 16px "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font: 600 15px "Helvetica Neue", Helvetica, Arial, sans-serif;
   fill: #666;
 }
 
