@@ -50,9 +50,22 @@ impl StatsCard {
 
         // Prepare stat lines (label, value, Option)
         let mut lines = Vec::new();
-        let header_size_y = Card::TITLE_FONT_SIZE + Self::TITLE_BODY_OFFSET;
+        // Title block height (title + small gap) unless title is hidden
+        let header_size_y = if self.card_settings.hide_title {
+            0
+        } else {
+            Card::TITLE_FONT_SIZE + Self::TITLE_BODY_OFFSET
+        };
 
-        let mut y: u32 = header_size_y + Self::ROW_Y_STEP + self.card_settings.offset_y;
+        // Starting baseline (text y) for the first stat row.
+        // If title is visible: keep previous spacing (title height + row step + top offset).
+        // If title is hidden: start so that the icon's top sits exactly at offset_y, giving
+        // symmetric padding top/bottom. Baseline = offset_y + ICON_SIZE.
+        let mut y: u32 = if self.card_settings.hide_title {
+            self.card_settings.offset_y + Self::ICON_SIZE
+        } else {
+            header_size_y + Self::ROW_Y_STEP + self.card_settings.offset_y
+        };
 
         if let Some(val) = self.stars_count {
             lines.push(self.render_line(
@@ -136,8 +149,15 @@ impl StatsCard {
 
         // Calculate card height: top margin + (lines * step) + bottom margin
         let line_count = lines.len().max(1) as u32;
-        let height =
-            header_size_y + line_count * Self::ROW_Y_STEP + self.card_settings.offset_y * 2;
+        let height = if self.card_settings.hide_title {
+            // Height so last baseline + offset_y is the bottom edge.
+            // last_baseline = first_baseline + (lines-1)*ROW_Y_STEP
+            // first_baseline = offset_y + ICON_SIZE
+            // height = last_baseline + offset_y
+            self.card_settings.offset_y * 2 + Self::ICON_SIZE + (line_count - 1) * Self::ROW_Y_STEP
+        } else {
+            header_size_y + line_count * Self::ROW_Y_STEP + self.card_settings.offset_y * 2
+        };
         let width: u32 = Self::LABEL_SIZE
             + Self::ICON_SIZE
             + Self::ICON_OFFSET
