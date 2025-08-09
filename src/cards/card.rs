@@ -187,13 +187,11 @@ impl Card {
         };
 
         format!(
-            r#"<rect x="{pos_x}" y="{pos_y}" rx="5" width="{width}" height="{height}" stroke="{stroke_color}" fill="{fill_color}" stroke-opacity="{stroke_opacity}"/>"#,
+            r#"<rect class="background" x="{pos_x}" y="{pos_y}" rx="5" width="{width}" height="{height}" stroke-opacity="{stroke_opacity}"/>"#,
             pos_x = stroke_offset,
             pos_y = stroke_offset,
             width = self.width as f32 - stroke_offset * 2.0,
             height = self.height as f32 - stroke_offset * 2.0,
-            fill_color = "#ffffff00",
-            stroke_color = "#e6e1e1ff",
             stroke_opacity = stroke_opacity,
         )
     }

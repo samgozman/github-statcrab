@@ -19,3 +19,8 @@
 .icon {
   fill: #333;
 }
+
+.background {
+  fill: #ffffff00;
+  stroke: #e6e1e1ff;
+}
