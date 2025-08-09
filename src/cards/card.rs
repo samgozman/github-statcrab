@@ -2,6 +2,7 @@
 pub type SVG = String;
 
 /// CardSettings holds unique settings for the [Card].
+#[derive(Clone)]
 pub struct CardSettings {
     /// Offset X (pixels) is used to offset the position of the [Card] in the SVG relative to its container by X axis.
     pub offset_x: u32,
@@ -13,18 +14,6 @@ pub struct CardSettings {
     pub hide_background: bool,
     /// Hide stroke (outline) of background rectangle while preserving layout.
     pub hide_background_stroke: bool,
-}
-
-impl Clone for CardSettings {
-    fn clone(&self) -> Self {
-        CardSettings {
-            offset_x: self.offset_x,
-            offset_y: self.offset_y,
-            hide_title: self.hide_title,
-            hide_background: self.hide_background,
-            hide_background_stroke: self.hide_background_stroke,
-        }
-    }
 }
 
 /// Card represents a card with a width, height, and title. Its a base wrapper for cards of different types.
@@ -174,7 +163,7 @@ impl Card {
     }
 
     fn render_background(&self) -> String {
-        // If stroke hidden – remove half-pixel inset so fill spans full size.
+        // If stroke hidden - remove half-pixel inset so fill spans full size.
         let stroke_offset: f32 = if self.settings.hide_background_stroke {
             0.0
         } else {
