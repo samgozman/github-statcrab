@@ -17,6 +17,7 @@ pub fn api_router() -> Router {
 
 #[derive(Debug, Deserialize)]
 pub enum ThemeQuery {
+    #[serde(rename = "transparent_blue")]
     TransparentBlue,
 }
 
@@ -328,7 +329,7 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn hide_subset_removes_labels_from_svg() {
+        async fn ok_hide_subset_removes_labels_from_svg() {
             let app = app();
             // Hide stars and pull requests
             let req = Request::builder()
@@ -343,6 +344,41 @@ mod tests {
             assert!(!body_str.contains("Pull Requests:"));
             // Some other stat should still be present
             assert!(body_str.contains("Issues:"));
+        }
+
+        #[tokio::test]
+        async fn ok_with_theme_query_param() {
+            let app = app();
+            let req = Request::builder()
+                .uri("/stats-card?username=alice&theme=transparent_blue")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let content_type = resp
+                .headers()
+                .get(header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("");
+            assert_eq!(content_type, "image/svg+xml");
+            let body = resp.into_body().collect().await.unwrap().to_bytes();
+            let body_str = String::from_utf8(body.to_vec()).unwrap();
+            assert!(body_str.contains("<svg"));
+        }
+        #[tokio::test]
+        async fn with_unknown_theme_returns_400() {
+            let app = app();
+            let req = Request::builder()
+                .uri("/stats-card?username=alice&theme=unknown_theme")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+            let body = resp.into_body().collect().await.unwrap().to_bytes();
+            let body_str = String::from_utf8(body.to_vec()).unwrap_or_default();
+            assert!(body_str.contains(
+                "Failed to deserialize query string: theme: unknown variant `unknown_theme`"
+            ));
         }
     }
 }
