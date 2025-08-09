@@ -1,4 +1,4 @@
-use crate::cards::card::{CardSettings, SVG};
+use crate::cards::card::{CardSettings, CardTheme, SVG};
 
 pub struct StatsCard {
     pub card_settings: CardSettings,
@@ -19,6 +19,7 @@ impl Default for StatsCard {
             card_settings: CardSettings {
                 offset_x: 1,
                 offset_y: 1,
+                theme: CardTheme::TransparentBlue,
                 hide_title: false,
                 hide_background: false,
                 hide_background_stroke: false,
@@ -252,8 +253,8 @@ impl StatsCard {
         format!(
             r#"<g class="row">
   {icon}
-  <text x="{pos_x_label}" y="{pos_y}">{label}:</text>
-  <text x="{pos_x_value}" y="{pos_y}">{value}</text>
+  <text class="label" x="{pos_x_label}" y="{pos_y}">{label}:</text>
+  <text class="value" x="{pos_x_value}" y="{pos_y}">{value}</text>
 </g>"#,
             icon = self.load_icon(icon, pos_x, pos_y.saturating_sub(Self::ICON_SIZE)),
             pos_x_label = pos_x_label,

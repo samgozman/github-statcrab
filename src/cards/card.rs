@@ -1,6 +1,12 @@
 /// SVG is a type alias for [String], representing an SVG representation of a card.
 pub type SVG = String;
 
+/// CardTheme defines the theme for the [Card].
+#[derive(Clone)]
+pub enum CardTheme {
+    TransparentBlue,
+}
+
 /// CardSettings holds unique settings for the [Card].
 #[derive(Clone)]
 pub struct CardSettings {
@@ -8,6 +14,8 @@ pub struct CardSettings {
     pub offset_x: u32,
     /// Offset Y (pixels) is used to offset the position of the [Card] in the SVG relative to its container by Y axis.
     pub offset_y: u32,
+    /// Theme of the [Card].
+    pub theme: CardTheme,
     /// Hide title title of the [Card].
     pub hide_title: bool,
     /// Hide background of the [Card].
@@ -56,7 +64,10 @@ impl Card {
 
     /// Renders the [Card] as an [SVG] string.
     pub fn render(&self) -> SVG {
-        let style = Self::indent(&self.style, 2);
+        let theme = self.load_theme_style();
+        // Merge the theme style with the base style, indenting it for readability.
+        let style = Self::indent(&format!("{}\n{}", self.style, theme), 2);
+
         let body = Self::indent(&self.body, 4);
         let rendered_background = if !self.settings.hide_background {
             self.render_background()
@@ -184,6 +195,14 @@ impl Card {
             stroke_opacity = stroke_opacity,
         )
     }
+
+    fn load_theme_style(&self) -> String {
+        match self.settings.theme {
+            CardTheme::TransparentBlue => {
+                include_str!("../../assets/css/themes/transparent-blue.css").to_string()
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -204,6 +223,7 @@ mod tests {
                 CardSettings {
                     offset_x: 10,
                     offset_y: 10,
+                    theme: CardTheme::TransparentBlue,
                     hide_title: false,
                     hide_background: false,
                     hide_background_stroke: false,
@@ -228,6 +248,7 @@ mod tests {
                 CardSettings {
                     offset_x: 10,
                     offset_y: 10,
+                    theme: CardTheme::TransparentBlue,
                     hide_title: false,
                     hide_background: false,
                     hide_background_stroke: false,
@@ -247,6 +268,7 @@ mod tests {
                 CardSettings {
                     offset_x: 10,
                     offset_y: 10,
+                    theme: CardTheme::TransparentBlue,
                     hide_title: false,
                     hide_background: false,
                     hide_background_stroke: false,
@@ -266,6 +288,7 @@ mod tests {
                 CardSettings {
                     offset_x: 50,
                     offset_y: 10,
+                    theme: CardTheme::TransparentBlue,
                     hide_title: false,
                     hide_background: false,
                     hide_background_stroke: false,
@@ -285,6 +308,7 @@ mod tests {
                 CardSettings {
                     offset_x: 60,
                     offset_y: 10,
+                    theme: CardTheme::TransparentBlue,
                     hide_title: false,
                     hide_background: false,
                     hide_background_stroke: false,
@@ -318,6 +342,7 @@ mod tests {
                 CardSettings {
                     offset_x: 1,
                     offset_y: 1,
+                    theme: CardTheme::TransparentBlue,
                     hide_title: false,
                     hide_background: false,
                     hide_background_stroke: false,
@@ -346,6 +371,7 @@ mod tests {
                 CardSettings {
                     offset_x: 1,
                     offset_y: 1,
+                    theme: CardTheme::TransparentBlue,
                     hide_title: true,
                     hide_background: false,
                     hide_background_stroke: false,
@@ -368,6 +394,7 @@ mod tests {
                 CardSettings {
                     offset_x: 1,
                     offset_y: 1,
+                    theme: CardTheme::TransparentBlue,
                     hide_title: true,
                     hide_background: false,
                     hide_background_stroke: true,
@@ -389,6 +416,7 @@ mod tests {
                 CardSettings {
                     offset_x: 1,
                     offset_y: 1,
+                    theme: CardTheme::TransparentBlue,
                     hide_title: true,
                     hide_background: false,
                     hide_background_stroke: false,
@@ -413,6 +441,7 @@ mod tests {
                 CardSettings {
                     offset_x: 1,
                     offset_y: 1,
+                    theme: CardTheme::TransparentBlue,
                     hide_title: false,
                     hide_background: true,
                     hide_background_stroke: false,
@@ -437,6 +466,7 @@ mod tests {
                 CardSettings {
                     offset_x: 1,
                     offset_y: 1,
+                    theme: CardTheme::TransparentBlue,
                     hide_title: true,
                     hide_background: true,
                     hide_background_stroke: false,
@@ -466,6 +496,7 @@ mod tests {
                 CardSettings {
                     offset_x: 1,
                     offset_y: 1,
+                    theme: CardTheme::TransparentBlue,
                     hide_title: false,
                     hide_background: false,
                     hide_background_stroke: false,

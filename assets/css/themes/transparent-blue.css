@@ -1,0 +1,20 @@
+/**
+ * Transparent Blue theme.
+ */
+
+.title {
+  fill: #3469c5;
+}
+
+.label, .value {
+  fill: #678fd4;
+}
+
+.icon {
+  fill: #3469c5;
+}
+
+.background {
+  fill: #ffffff00;
+  stroke: #ccdaf1;
+}

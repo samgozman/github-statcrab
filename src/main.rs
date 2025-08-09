@@ -1,6 +1,6 @@
 mod cards;
 
-use cards::card::CardSettings;
+use cards::card::{CardSettings, CardTheme};
 use cards::stats_card::StatsCard;
 
 fn main() {
@@ -8,6 +8,7 @@ fn main() {
         card_settings: CardSettings {
             offset_x: 12,
             offset_y: 12,
+            theme: CardTheme::TransparentBlue,
             hide_title: false,
             hide_background: false,
             hide_background_stroke: false,
