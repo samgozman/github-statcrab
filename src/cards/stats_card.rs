@@ -1,4 +1,4 @@
-use crate::cards::card::{CardSettings, CardTheme, SVG};
+use crate::cards::card::{CardSettings, CardTheme, Svg};
 
 pub struct StatsCard {
     pub card_settings: CardSettings,
@@ -47,8 +47,8 @@ impl StatsCard {
     const TITLE_BODY_OFFSET: u32 = 1;
     const ROW_Y_STEP: u32 = 27;
 
-    /// Renders the [StatsCard] as an [SVG] string.
-    pub fn render(&self) -> SVG {
+    /// Renders the [StatsCard] as an [Svg] string.
+    pub fn render(&self) -> Svg {
         use crate::cards::card::Card;
 
         // Prepare stat lines (label, value, Option)
@@ -187,7 +187,7 @@ impl StatsCard {
         );
         match card {
             Ok(card) => card.render(),
-            Err(e) => format!("Failed to render StatsCard: {}", e),
+            Err(e) => format!("Failed to render StatsCard: {e}"),
         }
     }
 
@@ -229,10 +229,7 @@ impl StatsCard {
         // Assumes the SVG starts with <svg ...>
         if let Some(idx) = svg.find('>') {
             let (start, rest) = svg.split_at(idx);
-            format!(
-                "{} x=\"{}\" y=\"{}\" width=\"16\" height=\"16\"{}",
-                start, x, y, rest
-            )
+            format!("{start} x=\"{x}\" y=\"{y}\" width=\"16\" height=\"16\"{rest}")
         } else {
             svg.to_string()
         }
@@ -286,8 +283,10 @@ mod tests {
 
         #[test]
         fn basic() {
-            let mut card = StatsCard::default();
-            card.username = "testuser".to_string();
+            let card = StatsCard {
+                username: "testuser".to_string(),
+                ..Default::default()
+            };
             let line = card.render_line(StatIcon::Stars, "Stars", 42, 10, 20);
             assert!(line.contains("<g class=\"row\">"));
             assert!(line.contains(">Stars:</text>"));
@@ -316,10 +315,12 @@ mod tests {
 
         #[test]
         fn with_some_fields() {
-            let mut card = StatsCard::default();
-            card.username = "octocat".to_string();
-            card.stars_count = Some(10);
-            card.commits_ytd_count = Some(20);
+            let card = StatsCard {
+                username: "octocat".to_string(),
+                stars_count: Some(10),
+                commits_ytd_count: Some(20),
+                ..Default::default()
+            };
             let svg = card.render();
             assert!(svg.contains("@octocat: GitHub Stats"));
             assert!(svg.contains(">Stars:</text>"));
@@ -332,10 +333,12 @@ mod tests {
 
         #[test]
         fn with_username_longer_than_limit() {
-            let mut card = StatsCard::default();
-            card.username = "averylongusername".to_string();
-            card.stars_count = Some(10);
-            card.commits_ytd_count = Some(20);
+            let card = StatsCard {
+                username: "averylongusername".to_string(),
+                stars_count: Some(10),
+                commits_ytd_count: Some(20),
+                ..Default::default()
+            };
             let svg = card.render();
             // Should use default title instead of username
             assert!(svg.contains("GitHub Stats"));
@@ -345,10 +348,12 @@ mod tests {
 
         #[test]
         fn svg_is_valid_xml() {
-            let mut card = StatsCard::default();
-            card.username = "xmluser".to_string();
-            card.stars_count = Some(1);
-            card.commits_ytd_count = Some(2);
+            let card = StatsCard {
+                username: "xmluser".to_string(),
+                stars_count: Some(1),
+                commits_ytd_count: Some(2),
+                ..Default::default()
+            };
             let svg = card.render();
             // Use quick_xml to check well-formedness
             use quick_xml::Reader;
@@ -363,7 +368,7 @@ mod tests {
                     }
                     Ok(Event::Eof) => break,
                     Ok(_) => (),
-                    Err(e) => panic!("Invalid SVG/XML: {}", e),
+                    Err(e) => panic!("Invalid SVG/XML: {e}"),
                 }
                 buf.clear();
             }

@@ -1,5 +1,5 @@
-/// SVG is a type alias for [String], representing an SVG representation of a card.
-pub type SVG = String;
+/// Svg is a type alias for [String], representing an SVG representation of a card.
+pub type Svg = String;
 
 /// CardTheme defines the theme for the [Card].
 #[derive(Clone)]
@@ -25,7 +25,7 @@ pub struct CardSettings {
 }
 
 /// Card represents a card with a width, height, and title. Its a base wrapper for cards of different types.
-/// It provides a method to create a new card and render it as an [SVG] string.
+/// It provides a method to create a new card and render it as an [Svg] string.
 pub struct Card {
     width: u32,
     height: u32,
@@ -62,11 +62,12 @@ impl Card {
         Ok(card)
     }
 
-    /// Renders the [Card] as an [SVG] string.
-    pub fn render(&self) -> SVG {
+    /// Renders the [Card] as an [Svg] string.
+    pub fn render(&self) -> Svg {
         let theme = self.load_theme_style();
         // Merge the theme style with the base style, indenting it for readability.
-        let style = Self::indent(&format!("{}\n{}", self.style, theme), 2);
+        let base_style = self.style.as_str();
+        let style = Self::indent(&format!("{base_style}\n{theme}"), 2);
 
         let body = Self::indent(&self.body, 4);
         let rendered_background = if !self.settings.hide_background {
@@ -157,10 +158,7 @@ impl Card {
     /// Indents each line by the given number of spaces.
     fn indent(lines: &str, spaces: usize) -> String {
         let pad = " ".repeat(spaces);
-        lines
-            .lines()
-            .map(|line| format!("{}{}\n", pad, line))
-            .collect()
+        lines.lines().map(|line| format!("{pad}{line}\n")).collect()
     }
 
     /// Renders the title of the [Card] as an SVG text element.
@@ -516,7 +514,7 @@ mod tests {
                     }
                     Ok(Event::Eof) => break,
                     Ok(_) => (),
-                    Err(e) => panic!("Invalid SVG/XML: {}", e),
+                    Err(e) => panic!("Invalid SVG/XML: {e}"),
                 }
                 buf.clear();
             }

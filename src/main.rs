@@ -25,5 +25,5 @@ fn main() {
     }
     .render();
 
-    println!("{}", card);
+    println!("{card}");
 }
