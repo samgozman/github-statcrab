@@ -17,8 +17,8 @@ impl Default for StatsCard {
     fn default() -> Self {
         StatsCard {
             card_settings: CardSettings {
-                offset_x: 1,
-                offset_y: 1,
+                offset_x: 12,
+                offset_y: 12,
                 theme: CardTheme::TransparentBlue,
                 hide_title: false,
                 hide_background: false,

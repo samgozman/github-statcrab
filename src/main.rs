@@ -1,29 +1,20 @@
 mod cards;
+mod web;
 
-use cards::card::{CardSettings, CardTheme};
-use cards::stats_card::StatsCard;
+use axum::serve;
+use std::net::SocketAddr;
+use tokio::net::TcpListener;
 
-fn main() {
-    let card = StatsCard {
-        card_settings: CardSettings {
-            offset_x: 12,
-            offset_y: 12,
-            theme: CardTheme::TransparentBlue,
-            hide_title: false,
-            hide_background: false,
-            hide_background_stroke: false,
-        },
-        username: "samgozman".to_string(),
-        stars_count: Some(2400),
-        commits_ytd_count: Some(123),
-        issues_count: Some(123),
-        pull_requests_count: Some(123),
-        merge_requests_count: Some(123),
-        reviews_count: Some(123),
-        started_discussions_count: Some(123),
-        answered_discussions_count: Some(123),
+#[tokio::main]
+async fn main() {
+    let app = web::app_router();
+
+    // Bind address (0.0.0.0 to be accessible in containers; localhost otherwise)
+    let addr: SocketAddr = "0.0.0.0:3000".parse().expect("valid socket address");
+    let listener = TcpListener::bind(addr).await.expect("bind tcp listener");
+    println!("Listening on http://{}", listener.local_addr().unwrap());
+
+    if let Err(e) = serve(listener, app).await {
+        eprintln!("server error: {e}");
     }
-    .render();
-
-    println!("{card}");
 }
