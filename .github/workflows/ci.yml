@@ -1,0 +1,70 @@
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+name: CI
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.88.0
+          components: rustfmt
+
+      - name: Run rustfmt
+        run: make fmt-check
+
+  clippy:
+    needs: [fmt]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+          toolchain: 1.88.0
+      - name: Run clippy
+        run: make clippy-check
+        timeout-minutes: 10
+
+  test:
+    needs: [fmt]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.88.0
+
+      - name: Run unit tests
+        run: make test
+        timeout-minutes: 10
+
+  conclusion:
+    needs: [fmt, clippy, test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Result
+        run: |
+          jq -C <<< "${needs}"
+          # Check if all needs were successful or skipped.
+          "$(jq -r 'all(.result as $result | (["success", "skipped"] | contains([$result])))' <<< "${needs}")"
+        env:
+          needs: ${{ toJson(needs) }}
