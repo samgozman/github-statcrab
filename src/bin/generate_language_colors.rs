@@ -53,7 +53,7 @@ fn main() -> Result<()> {
     let mut serializer = Serializer::with_formatter(&mut buf, formatter);
     json_value.serialize(&mut serializer)?;
     let json_str = String::from_utf8(buf).context("Encoding JSON as UTF-8 failed")?;
-    fs::write(out_path, format!("{}\n", json_str))
+    fs::write(out_path, format!("{json_str}\n"))
         .with_context(|| format!("Writing {}", out_path.display()))?;
 
     println!("Wrote {}", out_path.display());
