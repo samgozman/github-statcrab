@@ -187,6 +187,7 @@ impl StatsCard {
         );
         match card {
             Ok(card) => card.render(),
+            // TODO: handle error properly
             Err(e) => format!("Failed to render StatsCard: {e}"),
         }
     }
