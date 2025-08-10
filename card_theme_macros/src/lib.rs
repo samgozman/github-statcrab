@@ -183,3 +183,96 @@ fn collect_themes() -> Vec<ThemeMeta> {
 
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::fs::File;
+    use std::io::Write;
+    use std::path::Path;
+    use tempfile::tempdir;
+
+    // Test-only variant that scans a provided base directory instead of CARGO_MANIFEST_DIR
+    fn collect_themes_in_dir(base: &std::path::Path) -> Vec<ThemeMeta> {
+        let themes_dir = base.join("assets/css/themes");
+        let mut out = Vec::new();
+        let entries = fs::read_dir(&themes_dir).expect("Failed to read assets/css/themes");
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("css") {
+                continue;
+            }
+            let stem = match path.file_stem().and_then(|s| s.to_str()) {
+                Some(s) => s,
+                None => continue,
+            };
+
+            let variant = to_pascal_case(stem);
+            let variant_ident = syn::Ident::new(&variant, proc_macro2::Span::call_site());
+
+            let doc_text = to_title_from_stem(stem);
+            let doc_lit = LitStr::new(&doc_text, variant_ident.span());
+
+            let rename = stem.to_ascii_lowercase().replace('-', "_");
+            let rename_lit = LitStr::new(&rename, proc_macro2::Span::call_site());
+
+            let abs = path.canonicalize().unwrap_or(path.clone());
+            let include_path = abs.to_string_lossy().to_string();
+            let include_lit = LitStr::new(&include_path, proc_macro2::Span::call_site());
+
+            out.push(ThemeMeta {
+                variant_ident,
+                doc_lit,
+                include_lit,
+                rename_lit,
+            });
+        }
+        out
+    }
+
+    #[test]
+    fn fn_to_pascal_case() {
+        assert_eq!(to_pascal_case("transparent-blue"), "TransparentBlue");
+        assert_eq!(to_pascal_case("dark_mode"), "DarkMode");
+        assert_eq!(to_pascal_case("Mixed-CASE_name"), "MixedCaseName");
+        assert_eq!(to_pascal_case(" simple "), "Simple");
+    }
+
+    #[test]
+    fn fn_to_title_from_stem() {
+        assert_eq!(to_title_from_stem("transparent-blue"), "Transparent Blue");
+        assert_eq!(to_title_from_stem("dark_mode"), "Dark Mode");
+        assert_eq!(to_title_from_stem("simple"), "Simple");
+    }
+
+    // The following smoke test validates collect_themes() produces at least one entry
+    // in this repository's layout. We don't assert exact contents to keep it stable.
+    #[test]
+    fn fn_collect_themes_smoke() {
+        // Build a temporary assets/css/themes directory to scan
+        let tmp = tempdir().expect("tempdir");
+        let base = tmp.path();
+        let themes_dir = base.join("assets/css/themes");
+        fs::create_dir_all(&themes_dir).expect("mkdir -p assets/css/themes");
+
+        // Create a sample theme file
+        let css_path = themes_dir.join("transparent-blue.css");
+        let mut f = File::create(&css_path).expect("create css");
+        writeln!(f, ":root {{ --primary: #00f; }}").unwrap();
+
+        let metas = collect_themes_in_dir(base);
+        assert_eq!(metas.len(), 1);
+        let m = &metas[0];
+        assert_eq!(m.variant_ident.to_string(), "TransparentBlue");
+        assert_eq!(m.doc_lit.value(), "Transparent Blue");
+        assert!(
+            m.include_lit.value().ends_with(
+                Path::new("assets/css/themes/transparent-blue.css")
+                    .to_string_lossy()
+                    .as_ref()
+            )
+        );
+        assert_eq!(m.rename_lit.value(), "transparent_blue");
+    }
+}

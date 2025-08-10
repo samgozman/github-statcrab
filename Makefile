@@ -16,4 +16,4 @@ clippy-fix:
 
 # Run the tests
 test:
-	cargo test --locked --all-targets --workspace --all-features
+	cargo test --all --all-targets --workspace --all-features

@@ -22,3 +22,6 @@ card_theme_macros = { path = "./card_theme_macros" }
 quick-xml = "0.38.1"
 http-body-util = "0.1.3"
 tower = "0.5.1"
+
+[workspace]
+members = ["card_theme_macros"]
