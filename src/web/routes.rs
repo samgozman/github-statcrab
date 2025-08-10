@@ -10,24 +10,13 @@ use std::{collections::HashSet, str::FromStr};
 
 use crate::cards::card::{CardSettings, CardTheme};
 use crate::cards::stats_card::StatsCard;
+use card_theme_macros::build_theme_query;
 
 pub fn api_router() -> Router {
     Router::new().route("/stats-card", get(get_stats_card))
 }
 
-#[derive(Debug, Deserialize)]
-pub enum ThemeQuery {
-    #[serde(rename = "transparent_blue")]
-    TransparentBlue,
-}
-
-impl From<ThemeQuery> for CardTheme {
-    fn from(t: ThemeQuery) -> Self {
-        match t {
-            ThemeQuery::TransparentBlue => CardTheme::TransparentBlue,
-        }
-    }
-}
+build_theme_query!();
 
 #[derive(Debug, Deserialize)]
 pub struct StatsCardQuery {

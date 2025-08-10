@@ -1,11 +1,8 @@
 /// Svg is a type alias for [String], representing an SVG representation of a card.
 pub type Svg = String;
 
-/// CardTheme defines the theme for the [Card].
-#[derive(Clone)]
-pub enum CardTheme {
-    TransparentBlue,
-}
+use card_theme_macros::build_card_themes;
+build_card_themes!();
 
 /// CardSettings holds unique settings for the [Card].
 #[derive(Clone)]
@@ -195,11 +192,7 @@ impl Card {
     }
 
     fn load_theme_style(&self) -> String {
-        match self.settings.theme {
-            CardTheme::TransparentBlue => {
-                include_str!("../../assets/css/themes/transparent-blue.css").to_string()
-            }
-        }
+        self.settings.theme.load_css().to_string()
     }
 }
 
