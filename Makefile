@@ -17,3 +17,11 @@ clippy-fix:
 # Run the tests
 test:
 	cargo test --all --all-targets --workspace --all-features
+
+# Generate language colors JSON from GitHub linguist
+gen-language-colors:
+	cargo run --bin generate_language_colors --features gen-language-colors
+
+# Run the server binary
+run:
+	cargo run --bin server -q

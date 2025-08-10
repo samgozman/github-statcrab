@@ -17,6 +17,11 @@ serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.142"
 tokio = { version = "1.47.1", features = ["rt-multi-thread", "macros"] }
 card_theme_macros = { path = "./card_theme_macros" }
+reqwest = { version = "0.12.22", default-features = false, features = [
+  "blocking",
+  "rustls-tls",
+], optional = true }
+serde_yaml = { version = "0.9.34-deprecated", optional = true }
 
 [dev-dependencies]
 quick-xml = "0.38.1"
@@ -25,3 +30,17 @@ tower = "0.5.1"
 
 [workspace]
 members = ["card_theme_macros"]
+
+[[bin]]
+name = "server"
+path = "src/main.rs"
+
+# `generate_language_colors` hidden by feature flag to avoid unnecessary dependencies in the main binary.
+[[bin]]
+name = "generate_language_colors"
+path = "src/bin/generate_language_colors.rs"
+required-features = ["gen-language-colors"]
+
+[features]
+default = []
+gen-language-colors = ["dep:reqwest", "dep:serde_yaml"]
