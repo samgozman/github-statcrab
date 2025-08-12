@@ -191,6 +191,7 @@ impl LangsCard {
             String::from("Most used languages"),
             String::from("GitHub top languages"),
             body,
+            "langsCard".to_string(),
             self.card_settings.clone(),
         );
 

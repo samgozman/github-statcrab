@@ -31,6 +31,8 @@ pub struct Card {
     body: String,
     /// The CSS base style for the card, loaded from an external file.
     style: String,
+    /// The outer class name for the card, used for styling.
+    outer_class: String,
     settings: CardSettings,
 }
 
@@ -44,6 +46,7 @@ impl Card {
         title: String,
         description: String,
         body: String,
+        outer_class: String,
         settings: CardSettings,
     ) -> anyhow::Result<Self, anyhow::Error> {
         let card = Card {
@@ -54,6 +57,7 @@ impl Card {
             body,
             style: Self::load_style(),
             settings,
+            outer_class,
         };
         card.validate().map_err(anyhow::Error::msg)?;
         Ok(card)
@@ -95,7 +99,7 @@ impl Card {
   <desc id="description-id">{description}</desc>
   {rendered_background}
   {rendered_title}
-  <g class="body" x="0" y="0">
+  <g class="{outer_class}" x="0" y="0">
 {body}
   </g>
 </svg>
@@ -104,6 +108,7 @@ impl Card {
             height = self.height,
             title = self.title,
             description = self.description,
+            outer_class = self.outer_class,
             body = body,
             rendered_background = rendered_background,
             rendered_title = rendered_title,
@@ -211,6 +216,7 @@ mod tests {
                 "Test Card".to_string(),
                 "Test Desc".to_string(),
                 "Test Body".to_string(),
+                "test-card".to_string(),
                 CardSettings {
                     offset_x: 10,
                     offset_y: 10,
@@ -236,6 +242,7 @@ mod tests {
                 "Test Card".to_string(),
                 "Test Desc".to_string(),
                 "Test Body".to_string(),
+                "test-card".to_string(),
                 CardSettings {
                     offset_x: 10,
                     offset_y: 10,
@@ -256,6 +263,7 @@ mod tests {
                 "Test Card".to_string(),
                 "Test Desc".to_string(),
                 "Test Body".to_string(),
+                "test-card".to_string(),
                 CardSettings {
                     offset_x: 10,
                     offset_y: 10,
@@ -276,6 +284,7 @@ mod tests {
                 "Test Card".to_string(),
                 "Test Desc".to_string(),
                 "Test Body".to_string(),
+                "test-card".to_string(),
                 CardSettings {
                     offset_x: 50,
                     offset_y: 10,
@@ -296,6 +305,7 @@ mod tests {
                 "Test Card".to_string(),
                 "Test Desc".to_string(),
                 "Test Body".to_string(),
+                "test-card".to_string(),
                 CardSettings {
                     offset_x: 60,
                     offset_y: 10,
@@ -330,6 +340,7 @@ mod tests {
                 "Test Title".to_string(),
                 "".to_string(),
                 "".to_string(),
+                "".to_string(),
                 CardSettings {
                     offset_x: 1,
                     offset_y: 1,
@@ -359,6 +370,7 @@ mod tests {
                 "Title".to_string(),
                 "Desc".to_string(),
                 "Body".to_string(),
+                "".to_string(),
                 CardSettings {
                     offset_x: 1,
                     offset_y: 1,
@@ -382,6 +394,7 @@ mod tests {
                 "Title".to_string(),
                 "Desc".to_string(),
                 "Body".to_string(),
+                "".to_string(),
                 CardSettings {
                     offset_x: 1,
                     offset_y: 1,
@@ -404,6 +417,7 @@ mod tests {
                 "Test Title".to_string(),
                 "Test Desc".to_string(),
                 "Test Body".to_string(),
+                "test-card".to_string(),
                 CardSettings {
                     offset_x: 1,
                     offset_y: 1,
@@ -429,6 +443,7 @@ mod tests {
                 "Test Title".to_string(),
                 "Test Desc".to_string(),
                 "Test Body".to_string(),
+                "test-card".to_string(),
                 CardSettings {
                     offset_x: 1,
                     offset_y: 1,
@@ -454,6 +469,7 @@ mod tests {
                 "Test Title".to_string(),
                 "Test Desc".to_string(),
                 "Test Body".to_string(),
+                "test-card".to_string(),
                 CardSettings {
                     offset_x: 1,
                     offset_y: 1,
@@ -484,6 +500,7 @@ mod tests {
                 "SVG Card".to_string(),
                 "SVG Description".to_string(),
                 "<rect width=\"100\" height=\"200\" fill=\"#fff\"/>".to_string(),
+                "".to_string(),
                 CardSettings {
                     offset_x: 1,
                     offset_y: 1,

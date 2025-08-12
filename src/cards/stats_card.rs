@@ -183,6 +183,7 @@ impl StatsCard {
             display_title,
             String::from("GitHub statistics summary"),
             body,
+            "statsCard".to_string(),
             self.card_settings.clone(),
         );
         match card {
