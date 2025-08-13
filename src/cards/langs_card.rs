@@ -115,8 +115,11 @@ pub struct LangsCard {
 
 impl LangsCard {
     const MAX_LANGUAGES: u64 = 20;
-    const TITLE_BODY_OFFSET: u32 = 1;
-    const ROW_Y_STEP: u32 = 32;
+    const TITLE_BODY_OFFSET: u32 = 10;
+    const ROW_Y_STEP: u32 = 34;
+    const HORIZONTAL_BAR_WIDTH: u32 = 220;
+    const VALUE_SIZE: u32 = 46;
+    const HORIZONTAL_VALUE_X_OFFSET: u32 = 10;
 
     pub fn render(&self) -> Svg {
         use crate::cards::card::Card;
@@ -129,9 +132,9 @@ impl LangsCard {
 
         // Starting baseline (text y) for the first row.
         let mut y: u32 = if self.card_settings.hide_title {
-            self.card_settings.offset_y + Self::ROW_Y_STEP // TODO: check if ROW_Y_STEP is correct
+            self.card_settings.offset_y + Self::ROW_Y_STEP
         } else {
-            header_size_y + Self::ROW_Y_STEP + self.card_settings.offset_y
+            header_size_y + self.card_settings.offset_y
         };
 
         let max_langs = self
@@ -183,11 +186,23 @@ impl LangsCard {
 
         let body = lines.join("\n");
 
-        // TODO: Calculate length and width of the card based on the content.
+        // TODO: Note height calculation is 3px smaller than the actual height. Need to fix it.
+        let height = if self.card_settings.hide_title {
+            Self::ROW_Y_STEP * top_langs.len() as u32 + self.card_settings.offset_y * 2
+        } else {
+            Self::ROW_Y_STEP * top_langs.len() as u32
+                + header_size_y
+                + self.card_settings.offset_y * 2
+        };
+
+        let width: u32 = Self::HORIZONTAL_BAR_WIDTH
+            + self.card_settings.offset_x * 2
+            + Self::HORIZONTAL_VALUE_X_OFFSET
+            + Self::VALUE_SIZE;
 
         let card = Card::new(
-            350,
-            350,
+            width,
+            height,
             String::from("Most used languages"),
             String::from("GitHub top languages"),
             body,
@@ -210,12 +225,12 @@ impl LangsCard {
         pos_y: u32,
     ) -> String {
         let label_x = pos_x + 2;
-        let label_y = pos_y + 15;
-        let percent_x = pos_x + 215;
-        let percent_y = pos_y + 34;
+        let label_y = pos_y + 18;
+        let percent_x = pos_x + Self::HORIZONTAL_BAR_WIDTH + Self::HORIZONTAL_VALUE_X_OFFSET;
+        let percent_y = pos_y + Self::ROW_Y_STEP - 2;
         let bar_container_x = pos_x;
         let bar_container_y = pos_y + 25;
-        let bar_width = 205; // background bar width
+        let bar_width: u32 = Self::HORIZONTAL_BAR_WIDTH;
 
         let percent_str = format!("{value:.2}%");
         let percent_bar_width = (bar_width as f64 * value / 100.0).round() as u32;
