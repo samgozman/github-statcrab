@@ -1,4 +1,7 @@
-use crate::cards::card::{CardSettings, CardTheme, Svg};
+use crate::cards::{
+    card::{CardSettings, CardTheme, Svg},
+    helpers::gel_language_color,
+};
 use std::{cmp::Ordering, collections::HashMap};
 
 /// Represents an edge in the language statistics graph.
@@ -155,9 +158,7 @@ impl LangsCard {
         );
 
         for stat in top_langs.iter() {
-            // TODO: calculate color based on the language name
-            // let color = self.card_settings.theme.get_color(&stat.name);
-            let color = "#00ADD8";
+            let color = gel_language_color(&stat.name);
             let label = &stat.name;
             let rank = stat.rank(
                 self.size_weight.unwrap_or(1.0),
