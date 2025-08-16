@@ -25,3 +25,7 @@ gen-language-colors:
 # Run the server binary
 run:
 	cargo run --bin server -q
+
+# Run the server in watch mode (requires `cargo install --locked watchexec-cli`)
+run-watch:
+	watchexec -r -w src -w Cargo.toml -e rs,toml -- cargo run --bin server -q

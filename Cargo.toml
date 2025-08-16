@@ -44,3 +44,12 @@ required-features = ["gen-language-colors"]
 [features]
 default = []
 gen-language-colors = ["dep:reqwest", "dep:serde_yaml"]
+
+# ---------------------------------------------------------------------------
+# Tooling metadata (not used by Cargo directly). This documents external dev
+# tools expected by contributors. Binary tools should be installed with
+# `cargo install --locked <crate>` and are intentionally not regular
+# dependencies to avoid bloating build graphs.
+# ---------------------------------------------------------------------------
+[package.metadata.dev-tools]
+watchexec = { crate = "watchexec-cli", install = "cargo install --locked watchexec-cli", usage = "make run-watch" }
