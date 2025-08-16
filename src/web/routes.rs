@@ -477,5 +477,240 @@ mod tests {
             let body_str = String::from_utf8(body.to_vec()).unwrap_or_default();
             assert!(body_str.contains("unknown variant `unknown_theme`"));
         }
+
+        #[tokio::test]
+        async fn hide_title_param_hides_title_group() {
+            let app = app();
+            let req = Request::builder()
+                .uri("/stats-card?username=alice&hide_title=true")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let body = resp.into_body().collect().await.unwrap().to_bytes();
+            let body_str = String::from_utf8(body.to_vec()).unwrap();
+            // <title> tag should still exist for accessibility
+            assert!(body_str.contains("<title id=\"title-id\">@alice: GitHub Stats</title>"));
+            // Visual title group should be absent
+            assert!(!body_str.contains("class=\"title\""));
+        }
+
+        #[tokio::test]
+        async fn hide_background_param_hides_background_rect() {
+            let app = app();
+            let req = Request::builder()
+                .uri("/stats-card?username=alice&hide_background=true")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let body = resp.into_body().collect().await.unwrap().to_bytes();
+            let body_str = String::from_utf8(body.to_vec()).unwrap();
+            assert!(!body_str.contains("<rect class=\"background\""));
+        }
+
+        #[tokio::test]
+        async fn hide_background_stroke_param_hides_stroke_only() {
+            let app = app();
+            let req = Request::builder()
+                .uri("/stats-card?username=alice&hide_background_stroke=true")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let body = resp.into_body().collect().await.unwrap().to_bytes();
+            let body_str = String::from_utf8(body.to_vec()).unwrap();
+            // Background still present
+            assert!(body_str.contains("<rect class=\"background\""));
+            // Stroke opacity hidden
+            assert!(body_str.contains("stroke-opacity=\"0\""));
+        }
+
+        #[tokio::test]
+        async fn offsets_affect_title_translation() {
+            let app = app();
+            // Card::TITLE_FONT_SIZE=18 so translate(x, 18 + offset_y)
+            let req = Request::builder()
+                .uri("/stats-card?username=alice&offset_x=30&offset_y=25")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let body = resp.into_body().collect().await.unwrap().to_bytes();
+            let body_str = String::from_utf8(body.to_vec()).unwrap();
+            assert!(body_str.contains("translate(30, 43)"));
+        }
+    }
+
+    // Tests for GET /api/langs-card route behavior
+    mod route_get_langs_card {
+        use super::*;
+
+        fn app() -> Router {
+            api_router()
+        }
+
+        #[tokio::test]
+        async fn requires_username_param() {
+            let app = app();
+            let req = Request::builder()
+                .uri("/langs-card")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+        }
+
+        #[tokio::test]
+        async fn ok_with_username_and_returns_svg() {
+            let app = app();
+            let req = Request::builder()
+                .uri("/langs-card?username=alice")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let content_type = resp
+                .headers()
+                .get(header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("");
+            assert_eq!(content_type, "image/svg+xml");
+            let body = resp.into_body().collect().await.unwrap().to_bytes();
+            let body_str = String::from_utf8(body.to_vec()).unwrap();
+            assert!(body_str.contains("<svg"));
+            assert!(body_str.contains("Most used languages"));
+            // All three stub languages should be present by default
+            assert!(body_str.contains(">Go</text>"));
+            assert!(body_str.contains(">JavaScript</text>"));
+            assert!(body_str.contains(">Rust</text>"));
+            // Percentages are rounded first then formatted => 47,30,23
+            assert!(body_str.contains("47.00%"));
+            assert!(body_str.contains("30.00%"));
+            assert!(body_str.contains("23.00%"));
+        }
+
+        #[tokio::test]
+        async fn max_languages_limits_rows() {
+            let app = app();
+            let req = Request::builder()
+                .uri("/langs-card?username=alice&max_languages=2")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let body = resp.into_body().collect().await.unwrap().to_bytes();
+            let body_str = String::from_utf8(body.to_vec()).unwrap();
+            // Only two rows should be rendered
+            assert_eq!(body_str.matches("<g class=\"row\">").count(), 2);
+            assert!(body_str.contains(">Go</text>"));
+            assert!(body_str.contains(">JavaScript</text>"));
+            // Rust should be excluded
+            assert!(!body_str.contains(">Rust</text>"));
+        }
+
+        #[tokio::test]
+        async fn size_and_count_weights_affect_order_and_percentages() {
+            let app = app();
+            // size_weight=0, count_weight=1 ranks by repo_count -> Rust(10), JavaScript(8), Go(5)
+            let req = Request::builder()
+                .uri("/langs-card?username=alice&size_weight=0&count_weight=1")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let body = resp.into_body().collect().await.unwrap().to_bytes();
+            let body_str = String::from_utf8(body.to_vec()).unwrap();
+            // Percentages (counts 10,8,5 / 23 => 43,35,22 after rounding)
+            assert!(body_str.contains("43.00%"));
+            assert!(body_str.contains("35.00%"));
+            assert!(body_str.contains("22.00%"));
+        }
+
+        #[tokio::test]
+        async fn invalid_username_returns_400() {
+            let app = app();
+            let req = Request::builder()
+                .uri("/langs-card?username=bad%20user")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+        }
+
+        #[tokio::test]
+        async fn hide_title_param_hides_title_group() {
+            let app = app();
+            let req = Request::builder()
+                .uri("/langs-card?username=alice&hide_title=true")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let body = resp.into_body().collect().await.unwrap().to_bytes();
+            let body_str = String::from_utf8(body.to_vec()).unwrap();
+            // Title tag remains with static title
+            assert!(body_str.contains("<title id=\"title-id\">Most used languages</title>"));
+            // Visual title group should be absent
+            assert!(!body_str.contains("class=\"title\""));
+        }
+
+        #[tokio::test]
+        async fn hide_background_param_hides_background_rect() {
+            let app = app();
+            let req = Request::builder()
+                .uri("/langs-card?username=alice&hide_background=true")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let body = resp.into_body().collect().await.unwrap().to_bytes();
+            let body_str = String::from_utf8(body.to_vec()).unwrap();
+            assert!(!body_str.contains("<rect class=\"background\""));
+        }
+
+        #[tokio::test]
+        async fn hide_background_stroke_param_hides_stroke_only() {
+            let app = app();
+            let req = Request::builder()
+                .uri("/langs-card?username=alice&hide_background_stroke=true")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let body = resp.into_body().collect().await.unwrap().to_bytes();
+            let body_str = String::from_utf8(body.to_vec()).unwrap();
+            assert!(body_str.contains("<rect class=\"background\""));
+            assert!(body_str.contains("stroke-opacity=\"0\""));
+        }
+
+        #[tokio::test]
+        async fn offsets_affect_title_translation() {
+            let app = app();
+            let req = Request::builder()
+                .uri("/langs-card?username=alice&offset_x=28&offset_y=10")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let body = resp.into_body().collect().await.unwrap().to_bytes();
+            let body_str = String::from_utf8(body.to_vec()).unwrap();
+            // Card::TITLE_FONT_SIZE=18 -> translate(28, 28)
+            assert!(body_str.contains("translate(28, 28)"));
+        }
+
+        #[tokio::test]
+        async fn with_unknown_theme_returns_400() {
+            let app = app();
+            let req = Request::builder()
+                .uri("/langs-card?username=alice&theme=unknown_theme")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+            let body = resp.into_body().collect().await.unwrap().to_bytes();
+            let body_str = String::from_utf8(body.to_vec()).unwrap_or_default();
+            assert!(body_str.contains("unknown variant `unknown_theme`"));
+        }
     }
 }
