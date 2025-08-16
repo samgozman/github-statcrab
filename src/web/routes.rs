@@ -217,26 +217,46 @@ build_theme_query!();
 #[derive(Debug, Deserialize)]
 struct CardSettingsQuery {
     // common optional visuals
-    offset_x: Option<u32>,
-    offset_y: Option<u32>,
+    offset_x: Option<String>,
+    offset_y: Option<String>,
     theme: Option<ThemeQuery>,
-    hide_title: Option<bool>,
-    hide_background: Option<bool>,
-    hide_background_stroke: Option<bool>,
+    hide_title: Option<String>,
+    hide_background: Option<String>,
+    hide_background_stroke: Option<String>,
 }
 
 impl CardSettingsQuery {
     fn into_settings(self) -> CardSettings {
         CardSettings {
-            offset_x: self.offset_x.unwrap_or(12),
-            offset_y: self.offset_y.unwrap_or(12),
+            offset_x: self
+                .offset_x
+                .as_deref()
+                .and_then(|s| s.parse::<u32>().ok())
+                .unwrap_or(12),
+            offset_y: self
+                .offset_y
+                .as_deref()
+                .and_then(|s| s.parse::<u32>().ok())
+                .unwrap_or(12),
             theme: self
                 .theme
                 .map(|t| t.into())
                 .unwrap_or(CardTheme::TransparentBlue),
-            hide_title: self.hide_title.unwrap_or(false),
-            hide_background: self.hide_background.unwrap_or(false),
-            hide_background_stroke: self.hide_background_stroke.unwrap_or(false),
+            hide_title: self
+                .hide_title
+                .as_deref()
+                .map(|s| s == "true")
+                .unwrap_or(false),
+            hide_background: self
+                .hide_background
+                .as_deref()
+                .map(|s| s == "true")
+                .unwrap_or(false),
+            hide_background_stroke: self
+                .hide_background_stroke
+                .as_deref()
+                .map(|s| s == "true")
+                .unwrap_or(false),
         }
     }
 }
