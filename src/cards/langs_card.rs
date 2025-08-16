@@ -119,7 +119,7 @@ pub struct LangsCard {
 impl LangsCard {
     const MAX_LANGUAGES: u64 = 20;
     const TITLE_BODY_OFFSET: u32 = 10;
-    const ROW_Y_STEP: u32 = 34;
+    const ROW_Y_STEP: u32 = 36;
     const HORIZONTAL_BAR_WIDTH: u32 = 220;
     const VALUE_SIZE: u32 = 46;
     const HORIZONTAL_VALUE_X_OFFSET: u32 = 10;
@@ -467,17 +467,17 @@ mod tests {
             // Basic structure
             assert!(rendered.contains("<g class=\"row\">"));
             // Label and its coordinates
-            assert!(rendered.contains("x=\"12\" y=\"35\" class=\"label\">Rust</text>"));
+            assert!(rendered.contains("x=\"12\" y=\"38\" class=\"label\">Rust</text>"));
             // Percentage text and its coordinates, formatted to 2 decimals
-            assert!(rendered.contains("x=\"225\" y=\"54\" class=\"value\">30.55%</text>"));
+            assert!(rendered.contains("x=\"240\" y=\"54\" class=\"value\">30.55%</text>"));
             // Bar container position and width
-            assert!(rendered.contains("<svg width=\"205\" x=\"10\" y=\"45\">"));
+            assert!(rendered.contains("<svg width=\"220\" x=\"10\" y=\"45\">"));
             // Background bar
             assert!(
-                rendered.contains("width=\"205\" height=\"8\" class=\"progressBarBackground\"")
+                rendered.contains("width=\"220\" height=\"8\" class=\"progressBarBackground\"")
             );
-            // Foreground bar width rounding: round(205 * 30.55 / 100) = 63
-            assert!(rendered.contains("width=\"63\" height=\"8\" fill=\"#00ADD8\""));
+            // Foreground bar width rounding: round(220 * 30.55 / 100) = 63
+            assert!(rendered.contains("width=\"67\" height=\"8\" fill=\"#00ADD8\""));
         }
     }
 
@@ -529,9 +529,9 @@ mod tests {
             assert!(svg.contains(">JavaScript</text>"));
             assert!(svg.contains(">47.00%</text>"));
             assert!(svg.contains(">30.00%</text>"));
-            // Progress bar widths for 47% and 30% on 205px width
-            assert!(svg.contains("width=\"96\" height=\"8\" fill=\"#00ADD8\""));
-            assert!(svg.contains("width=\"62\" height=\"8\" fill=\"#00ADD8\""));
+            // Progress bar widths for 47% and 30% on 220px width
+            assert!(svg.contains("width=\"103\" height=\"8\" fill=\"#00ADD8\""));
+            assert!(svg.contains("width=\"66\" height=\"8\" fill=\"#f1e05a\""));
             // Rust should not appear since max_languages is 2
             assert!(!svg.contains(">Rust</text>"));
         }
