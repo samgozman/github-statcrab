@@ -9,13 +9,18 @@ use serde::Deserialize;
 use std::{collections::HashSet, str::FromStr};
 
 use crate::cards::card::{CardSettings, CardTheme};
+use crate::cards::langs_card::{LangsCard, LanguageStat, LayoutType};
 use crate::cards::stats_card::StatsCard;
+
 use card_theme_macros::build_theme_query;
 
 pub fn api_router() -> Router {
-    Router::new().route("/stats-card", get(get_stats_card))
+    Router::new()
+        .route("/stats-card", get(get_stats_card))
+        .route("/langs-card", get(get_langs_card))
 }
 
+// Build the ThemeQuery enum from the macro
 build_theme_query!();
 
 #[derive(Debug, Deserialize)]
@@ -33,20 +38,12 @@ pub struct StatsCardQuery {
     hide: Option<String>,
 }
 
-fn svg_response(svg: String) -> Response {
-    let mut headers = HeaderMap::new();
-    headers.insert(
-        header::CONTENT_TYPE,
-        header::HeaderValue::from_static("image/svg+xml"),
-    );
-    (StatusCode::OK, headers, svg).into_response()
-}
-
 async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
-    if q.username.trim().is_empty() {
+    // Validate username
+    if let Err(e) = validate_username(&q.username) {
         return (
             StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({"error":"username is required"})),
+            Json(serde_json::json!({"error": e})),
         )
             .into_response();
     }
@@ -168,6 +165,114 @@ async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
     svg_response(svg)
 }
 
+#[derive(Debug, Deserialize)]
+pub struct LangsCardQuery {
+    // required
+    username: String,
+    // common optional visuals
+    offset_x: Option<u32>,
+    offset_y: Option<u32>,
+    theme: Option<ThemeQuery>,
+    hide_title: Option<bool>,
+    hide_background: Option<bool>,
+    hide_background_stroke: Option<bool>,
+    // optional stats
+    layout: Option<LayoutTypeQuery>,
+    size_weight: Option<f64>,
+    count_weight: Option<f64>,
+    max_languages: Option<u64>,
+}
+
+async fn get_langs_card(Query(q): Query<LangsCardQuery>) -> impl IntoResponse {
+    // Validate username
+    if let Err(e) = validate_username(&q.username) {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"error": e})),
+        )
+            .into_response();
+    }
+
+    // Base settings from Default
+    let mut settings = CardSettings {
+        offset_x: 12,
+        offset_y: 12,
+        theme: CardTheme::TransparentBlue,
+        hide_title: false,
+        hide_background: false,
+        hide_background_stroke: false,
+    };
+
+    if let Some(x) = q.offset_x {
+        settings.offset_x = x;
+    }
+    if let Some(y) = q.offset_y {
+        settings.offset_y = y;
+    }
+    if let Some(t) = q.theme {
+        settings.theme = t.into();
+    }
+    if let Some(v) = q.hide_title {
+        settings.hide_title = v;
+    }
+    if let Some(v) = q.hide_background {
+        settings.hide_background = v;
+    }
+    if let Some(v) = q.hide_background_stroke {
+        settings.hide_background_stroke = v;
+    }
+
+    let stats_stub = vec![
+        LanguageStat {
+            name: "Rust".to_string(),
+            size_bytes: 1000,
+            repo_count: 10,
+        },
+        LanguageStat {
+            name: "Go".to_string(),
+            size_bytes: 2000,
+            repo_count: 5,
+        },
+        LanguageStat {
+            name: "JavaScript".to_string(),
+            size_bytes: 1300,
+            repo_count: 8,
+        },
+    ];
+
+    let svg = LangsCard {
+        card_settings: settings,
+        layout: q.layout.unwrap_or(LayoutTypeQuery::Horizontal).into(),
+        stats: stats_stub,
+        size_weight: q.size_weight,
+        count_weight: q.count_weight,
+        max_languages: q.max_languages,
+    }
+    .render();
+
+    svg_response(svg)
+}
+
+/// Helper function to create a response with SVG content and appropriate headers
+fn svg_response(svg: String) -> Response {
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        header::CONTENT_TYPE,
+        header::HeaderValue::from_static("image/svg+xml"),
+    );
+    (StatusCode::OK, headers, svg).into_response()
+}
+
+fn validate_username(username: &str) -> Result<(), String> {
+    if username.trim().is_empty() {
+        return Err("Username cannot be empty".to_string());
+    }
+    if username.contains(' ') {
+        return Err("Username cannot contain spaces".to_string());
+    }
+    Ok(())
+}
+
 #[allow(clippy::enum_variant_names)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum HideStat {
@@ -194,6 +299,23 @@ impl FromStr for HideStat {
             "started_discussions_count" => Ok(HideStat::StartedDiscussionsCount),
             "answered_discussions_count" => Ok(HideStat::AnsweredDiscussionsCount),
             _ => Err(()),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+enum LayoutTypeQuery {
+    #[serde(rename = "horizontal")]
+    Horizontal,
+    #[serde(rename = "vertical")]
+    Vertical,
+}
+
+impl From<LayoutTypeQuery> for LayoutType {
+    fn from(layout: LayoutTypeQuery) -> Self {
+        match layout {
+            LayoutTypeQuery::Horizontal => LayoutType::Horizontal,
+            LayoutTypeQuery::Vertical => LayoutType::Vertical,
         }
     }
 }
