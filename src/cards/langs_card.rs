@@ -134,11 +134,7 @@ impl LangsCard {
         };
 
         // Starting baseline (text y) for the first row.
-        let mut y: u32 = if self.card_settings.hide_title {
-            self.card_settings.offset_y + Self::ROW_Y_STEP
-        } else {
-            header_size_y + self.card_settings.offset_y
-        };
+        let mut y: u32 = header_size_y + self.card_settings.offset_y;
 
         let max_langs = self
             .max_languages
