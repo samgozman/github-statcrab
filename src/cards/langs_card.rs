@@ -1,5 +1,5 @@
 use crate::cards::{
-    card::{CardSettings, CardTheme, Svg},
+    card::{CardSettings, Svg},
     helpers::gel_language_color,
 };
 use std::{cmp::Ordering, collections::HashMap};
@@ -483,6 +483,7 @@ mod tests {
 
     mod fn_render {
         use super::*;
+        use crate::cards::card::{CardSettings, CardTheme};
 
         #[test]
         fn test_render() {

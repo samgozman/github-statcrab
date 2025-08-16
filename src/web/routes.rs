@@ -20,20 +20,13 @@ pub fn api_router() -> Router {
         .route("/langs-card", get(get_langs_card))
 }
 
-// Build the ThemeQuery enum from the macro
-build_theme_query!();
-
 #[derive(Debug, Deserialize)]
 pub struct StatsCardQuery {
     // required
     username: String,
-    // common optional visuals
-    offset_x: Option<u32>,
-    offset_y: Option<u32>,
-    theme: Option<ThemeQuery>,
-    hide_title: Option<bool>,
-    hide_background: Option<bool>,
-    hide_background_stroke: Option<bool>,
+    // flattened common settings
+    #[serde(flatten)]
+    settings: CardSettingsQuery,
     // comma-separated array: e.g. ?hide=stars_count,commits_ytd_count
     hide: Option<String>,
 }
@@ -48,34 +41,8 @@ async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
             .into_response();
     }
 
-    // Base settings from Default
-    let mut settings = CardSettings {
-        offset_x: 12,
-        offset_y: 12,
-        theme: CardTheme::TransparentBlue,
-        hide_title: false,
-        hide_background: false,
-        hide_background_stroke: false,
-    };
-
-    if let Some(x) = q.offset_x {
-        settings.offset_x = x;
-    }
-    if let Some(y) = q.offset_y {
-        settings.offset_y = y;
-    }
-    if let Some(t) = q.theme {
-        settings.theme = t.into();
-    }
-    if let Some(v) = q.hide_title {
-        settings.hide_title = v;
-    }
-    if let Some(v) = q.hide_background {
-        settings.hide_background = v;
-    }
-    if let Some(v) = q.hide_background_stroke {
-        settings.hide_background_stroke = v;
-    }
+    // Build card settings from query (with defaults applied)
+    let settings = q.settings.into_settings();
 
     // Default values (demo)
     let mut stars_count = Some(2400);
@@ -169,13 +136,9 @@ async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
 pub struct LangsCardQuery {
     // required
     username: String,
-    // common optional visuals
-    offset_x: Option<u32>,
-    offset_y: Option<u32>,
-    theme: Option<ThemeQuery>,
-    hide_title: Option<bool>,
-    hide_background: Option<bool>,
-    hide_background_stroke: Option<bool>,
+    // flattened common settings
+    #[serde(flatten)]
+    settings: CardSettingsQuery,
     // optional stats
     layout: Option<LayoutTypeQuery>,
     size_weight: Option<f64>,
@@ -193,34 +156,8 @@ async fn get_langs_card(Query(q): Query<LangsCardQuery>) -> impl IntoResponse {
             .into_response();
     }
 
-    // Base settings from Default
-    let mut settings = CardSettings {
-        offset_x: 12,
-        offset_y: 12,
-        theme: CardTheme::TransparentBlue,
-        hide_title: false,
-        hide_background: false,
-        hide_background_stroke: false,
-    };
-
-    if let Some(x) = q.offset_x {
-        settings.offset_x = x;
-    }
-    if let Some(y) = q.offset_y {
-        settings.offset_y = y;
-    }
-    if let Some(t) = q.theme {
-        settings.theme = t.into();
-    }
-    if let Some(v) = q.hide_title {
-        settings.hide_title = v;
-    }
-    if let Some(v) = q.hide_background {
-        settings.hide_background = v;
-    }
-    if let Some(v) = q.hide_background_stroke {
-        settings.hide_background_stroke = v;
-    }
+    // Build card settings from query (with defaults applied)
+    let settings = q.settings.into_settings();
 
     let stats_stub = vec![
         LanguageStat {
@@ -271,6 +208,37 @@ fn validate_username(username: &str) -> Result<(), String> {
         return Err("Username cannot contain spaces".to_string());
     }
     Ok(())
+}
+
+// Build the ThemeQuery enum from the macro
+build_theme_query!();
+
+/// Common query parameters for building [CardSettings] reused across card endpoints.
+#[derive(Debug, Deserialize)]
+struct CardSettingsQuery {
+    // common optional visuals
+    offset_x: Option<u32>,
+    offset_y: Option<u32>,
+    theme: Option<ThemeQuery>,
+    hide_title: Option<bool>,
+    hide_background: Option<bool>,
+    hide_background_stroke: Option<bool>,
+}
+
+impl CardSettingsQuery {
+    fn into_settings(self) -> CardSettings {
+        CardSettings {
+            offset_x: self.offset_x.unwrap_or(12),
+            offset_y: self.offset_y.unwrap_or(12),
+            theme: self
+                .theme
+                .map(|t| t.into())
+                .unwrap_or(CardTheme::TransparentBlue),
+            hide_title: self.hide_title.unwrap_or(false),
+            hide_background: self.hide_background.unwrap_or(false),
+            hide_background_stroke: self.hide_background_stroke.unwrap_or(false),
+        }
+    }
 }
 
 #[allow(clippy::enum_variant_names)]
@@ -487,9 +455,7 @@ mod tests {
             assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
             let body = resp.into_body().collect().await.unwrap().to_bytes();
             let body_str = String::from_utf8(body.to_vec()).unwrap_or_default();
-            assert!(body_str.contains(
-                "Failed to deserialize query string: theme: unknown variant `unknown_theme`"
-            ));
+            assert!(body_str.contains("unknown variant `unknown_theme`"));
         }
     }
 }
