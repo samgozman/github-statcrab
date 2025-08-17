@@ -179,7 +179,7 @@ async fn get_langs_card(Query(q): Query<LangsCardQuery>) -> impl IntoResponse {
 
     let svg = LangsCard {
         card_settings: settings,
-        layout: q.layout.unwrap_or(LayoutTypeQuery::Horizontal).into(),
+        layout: q.layout.unwrap_or(LayoutTypeQuery::Vertical).into(),
         stats: stats_stub,
         size_weight: q.size_weight,
         count_weight: q.count_weight,
@@ -293,17 +293,17 @@ impl FromStr for HideStat {
 
 #[derive(Debug, Deserialize)]
 enum LayoutTypeQuery {
-    #[serde(rename = "horizontal")]
-    Horizontal,
     #[serde(rename = "vertical")]
     Vertical,
+    #[serde(rename = "horizontal")]
+    Horizontal,
 }
 
 impl From<LayoutTypeQuery> for LayoutType {
     fn from(layout: LayoutTypeQuery) -> Self {
         match layout {
-            LayoutTypeQuery::Horizontal => LayoutType::Horizontal,
             LayoutTypeQuery::Vertical => LayoutType::Vertical,
+            LayoutTypeQuery::Horizontal => LayoutType::Horizontal,
         }
     }
 }
