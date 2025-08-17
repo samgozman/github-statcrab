@@ -123,6 +123,7 @@ impl LangsCard {
     const VERTICAL_BAR_WIDTH: u32 = 220;
     const VALUE_SIZE: u32 = 46;
     const VERTICAL_VALUE_X_OFFSET: u32 = 10;
+    const BAR_HEIGHT: u32 = 8;
 
     // Horizontal layout constants
     const HORIZONTAL_COLUMN_WIDTH: u32 = 130;
@@ -184,7 +185,24 @@ impl LangsCard {
                 }
             }
             LayoutType::Horizontal => {
-                // Group languages by pairs (2 per row)
+                // Create a single horizontal bar with stacked segments
+                let total_width = Self::HORIZONTAL_COLUMN_WIDTH * 2 + Self::HORIZONTAL_COLUMN_GAP;
+                let bar_spacing = 10;
+
+                lines.push(Self::render_horizontal_bar(
+                    &top_langs,
+                    total_rank,
+                    self.size_weight.unwrap_or(1.0),
+                    self.count_weight.unwrap_or(0.0),
+                    self.card_settings.offset_x,
+                    y - bar_spacing,
+                    total_width,
+                ));
+
+                y += Self::BAR_HEIGHT + bar_spacing;
+
+                // Add language labels below the bar
+                let mut label_y = y;
                 for chunk in top_langs.chunks(2) {
                     let mut row_items = Vec::new();
 
@@ -203,12 +221,12 @@ impl LangsCard {
                                 * (Self::HORIZONTAL_COLUMN_WIDTH + Self::HORIZONTAL_COLUMN_GAP);
 
                         row_items.push(Self::render_line_horizontal(
-                            &color, label, value, x_offset, y,
+                            &color, label, value, x_offset, label_y,
                         ));
                     }
 
                     lines.push(format!("<g class=\"row\">\n{}\n</g>", row_items.join("\n")));
-                    y += Self::HORIZONTAL_ROW_Y_STEP;
+                    label_y += Self::HORIZONTAL_ROW_Y_STEP;
                 }
             }
         }
@@ -227,12 +245,16 @@ impl LangsCard {
                 }
             }
             LayoutType::Horizontal => {
-                // For horizontal layout, we group by 2 per row, so we need to calculate the number of rows
-                let num_rows = (top_langs.len() + 1) / 2; // Ceiling division
+                // For horizontal layout, we have a bar + grouped labels (2 per row)
+                let num_rows = (top_langs.len() + 1) / 2; // Ceiling division for label rows
+
                 if self.card_settings.hide_title {
-                    Self::HORIZONTAL_ROW_Y_STEP * num_rows as u32 + self.card_settings.offset_y * 2
+                    Self::BAR_HEIGHT
+                        + Self::HORIZONTAL_ROW_Y_STEP * num_rows as u32
+                        + self.card_settings.offset_y * 2
                 } else {
-                    Self::HORIZONTAL_ROW_Y_STEP * num_rows as u32
+                    Self::BAR_HEIGHT
+                        + Self::HORIZONTAL_ROW_Y_STEP * num_rows as u32
                         + header_size_y
                         + self.card_settings.offset_y * 2
                 }
@@ -278,7 +300,7 @@ impl LangsCard {
         pos_x: u32,
         pos_y: u32,
     ) -> String {
-        let bar_height = 8;
+        let bar_height = Self::BAR_HEIGHT;
         let label_x = pos_x + 2;
         let label_y = pos_y;
         let percent_x = pos_x + Self::VERTICAL_BAR_WIDTH + Self::VERTICAL_VALUE_X_OFFSET;
@@ -310,7 +332,7 @@ impl LangsCard {
         pos_y: u32,
     ) -> String {
         let circle_x = pos_x + Self::HORIZONTAL_CIRCLE_SIZE / 2;
-        let circle_y = pos_y + Self::HORIZONTAL_CIRCLE_SIZE / 2;
+        let circle_y = pos_y;
         let label_x = pos_x + Self::HORIZONTAL_CIRCLE_SIZE + Self::HORIZONTAL_CIRCLE_TEXT_GAP;
         let label_y = pos_y + 4;
 
@@ -320,6 +342,60 @@ impl LangsCard {
             r##"<circle cx="{circle_x}" cy="{circle_y}" r="{}" fill="{color}"/>
 <text x="{label_x}" y="{label_y}" class="label">{label} {percent_str}</text>"##,
             Self::HORIZONTAL_CIRCLE_SIZE / 2
+        )
+    }
+
+    fn render_horizontal_bar(
+        stats: &[LanguageStat],
+        total_rank: f64,
+        size_weight: f64,
+        count_weight: f64,
+        pos_x: u32,
+        pos_y: u32,
+        total_width: u32,
+    ) -> String {
+        let bar_height = Self::BAR_HEIGHT;
+        let mut segments = Vec::new();
+        let mut current_x = 0f64;
+
+        // Calculate all percentages first
+        let percentages: Vec<f64> = stats
+            .iter()
+            .map(|stat| {
+                let rank = stat.rank(size_weight, count_weight);
+                rank / total_rank * 100.0
+            })
+            .collect();
+
+        // Create segments with proper rounding to avoid gaps/overlaps
+        for (i, stat) in stats.iter().enumerate() {
+            let color = gel_language_color(&stat.name);
+
+            // Calculate the expected end position for this segment
+            let expected_end_x =
+                total_width as f64 * percentages[0..=i].iter().sum::<f64>() / 100.0;
+            let segment_width = (expected_end_x - current_x).round() as u32;
+
+            // Ensure minimum width of 1px for very small segments
+            let segment_width = segment_width.max(1);
+
+            segments.push(format!(
+                r##"<rect mask="url(#bar-mask)" x="{}" y="0" width="{segment_width}" height="{bar_height}" fill="{color}"/>"##,
+                current_x.round() as u32
+            ));
+            current_x += segment_width as f64;
+        }
+
+        format!(
+            r##"<g class="horizontal-bar">
+  <svg width="{total_width}" x="{pos_x}" y="{pos_y}">
+    <mask id="bar-mask">
+        <rect x="0" y="0" width="{total_width}" height="{bar_height}" fill="white" rx="5"/>
+    </mask>
+      {}
+  </svg>
+</g>"##,
+            segments.join("\n      ")
         )
     }
 }
@@ -625,8 +701,8 @@ mod tests {
             let pos_y = 20;
 
             let rendered = LangsCard::render_line_horizontal(color, label, value, pos_x, pos_y);
-            // Circle with correct position and color
-            assert!(rendered.contains("cx=\"14\" cy=\"24\" r=\"4\" fill=\"#00ADD8\""));
+            // Circle with correct position and color (circle_y = pos_y = 20, not pos_y + circle_size/2)
+            assert!(rendered.contains("cx=\"14\" cy=\"20\" r=\"4\" fill=\"#00ADD8\""));
             // Label and percentage in the same text element
             assert!(rendered.contains("x=\"28\" y=\"24\" class=\"label\">Rust 30.55%</text>"));
         }
@@ -679,15 +755,66 @@ mod tests {
             // Basic SVG structure and title
             assert!(svg.contains("<svg"));
             assert!(svg.contains("Most used languages"));
-            // Should have 2 rows (4 languages grouped by 2)
+            // Should have a horizontal bar
+            assert!(svg.contains("<g class=\"horizontal-bar\">"));
+            // Should have 2 rows for labels (4 languages grouped by 2)
             assert_eq!(svg.matches("<g class=\"row\">").count(), 2);
-            // Top languages should appear
+            // Top languages should appear in labels
             assert!(svg.contains(">Go"));
             assert!(svg.contains(">JavaScript"));
             assert!(svg.contains(">Rust"));
             assert!(svg.contains(">Python"));
-            // Should have circles for each language
+            // Should have circles for each language in labels
             assert_eq!(svg.matches("<circle").count(), 4);
+            // Should have horizontal bar segments (rect elements)
+            assert!(svg.matches("<rect").count() >= 4); // At least 4 segments for 4 languages
+        }
+
+        #[test]
+        fn test_render_horizontal_bar() {
+            let stats = vec![
+                LanguageStat {
+                    name: "Go".to_string(),
+                    size_bytes: 2000,
+                    repo_count: 5,
+                },
+                LanguageStat {
+                    name: "JavaScript".to_string(),
+                    size_bytes: 1300,
+                    repo_count: 8,
+                },
+                LanguageStat {
+                    name: "Rust".to_string(),
+                    size_bytes: 1000,
+                    repo_count: 10,
+                },
+            ];
+
+            let total_rank = 2000.0 + 1300.0 + 1000.0; // 4300.0
+            let rendered = LangsCard::render_horizontal_bar(
+                &stats, total_rank, 1.0, 0.0, 10,  // pos_x
+                20,  // pos_y
+                280, // total_width
+            );
+
+            // Should contain horizontal bar structure
+            assert!(rendered.contains("<g class=\"horizontal-bar\">"));
+            assert!(rendered.contains("x=\"10\" y=\"20\""));
+            assert!(rendered.contains("width=\"280\""));
+
+            // Should have 4 rect elements: 1 for mask + 3 segments
+            assert_eq!(rendered.matches("<rect").count(), 4);
+
+            // Check colors are present
+            assert!(rendered.contains("#00ADD8")); // Go
+            assert!(rendered.contains("#f1e05a")); // JavaScript
+            assert!(rendered.contains("#dea584")); // Rust
+
+            // Segments should be positioned correctly (first starts at x=0)
+            assert!(rendered.contains("x=\"0\""));
+
+            // Should have mask
+            assert!(rendered.contains("<mask id=\"bar-mask\">"));
         }
     }
 }
