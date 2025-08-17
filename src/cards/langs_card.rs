@@ -118,11 +118,18 @@ pub struct LangsCard {
 
 impl LangsCard {
     const MAX_LANGUAGES: u64 = 20;
-    const TITLE_BODY_OFFSET: u32 = 10;
+    const TITLE_BODY_OFFSET: u32 = 25;
     const ROW_Y_STEP: u32 = 36;
     const HORIZONTAL_BAR_WIDTH: u32 = 220;
     const VALUE_SIZE: u32 = 46;
     const HORIZONTAL_VALUE_X_OFFSET: u32 = 10;
+
+    // Vertical layout constants
+    const VERTICAL_COLUMN_WIDTH: u32 = 130;
+    const VERTICAL_COLUMN_GAP: u32 = 20;
+    const VERTICAL_CIRCLE_SIZE: u32 = 8;
+    const VERTICAL_CIRCLE_TEXT_GAP: u32 = 10;
+    const VERTICAL_ROW_Y_STEP: u32 = 25;
 
     pub fn render(&self) -> Svg {
         use crate::cards::card::Card;
@@ -153,18 +160,18 @@ impl LangsCard {
             self.count_weight.unwrap_or(0.0),
         );
 
-        for stat in top_langs.iter() {
-            let color = gel_language_color(&stat.name);
-            let label = &stat.name;
-            let rank = stat.rank(
-                self.size_weight.unwrap_or(1.0),
-                self.count_weight.unwrap_or(0.0),
-            );
-            // Value is the percentage of the total rank.
-            let value = (rank / total_rank * 100.0).round();
+        match self.layout {
+            LayoutType::Horizontal => {
+                for stat in top_langs.iter() {
+                    let color = gel_language_color(&stat.name);
+                    let label = &stat.name;
+                    let rank = stat.rank(
+                        self.size_weight.unwrap_or(1.0),
+                        self.count_weight.unwrap_or(0.0),
+                    );
+                    // Value is the percentage of the total rank.
+                    let value = (rank / total_rank * 100.0).round();
 
-            match self.layout {
-                LayoutType::Horizontal => {
                     lines.push(Self::render_line_horizontal(
                         &color,
                         label,
@@ -172,30 +179,80 @@ impl LangsCard {
                         self.card_settings.offset_x,
                         y,
                     ));
-                }
-                LayoutType::Vertical => {
-                    todo!("Vertical layout is not implemented yet");
+
+                    y += Self::ROW_Y_STEP;
                 }
             }
+            LayoutType::Vertical => {
+                // Group languages by pairs (2 per row)
+                for chunk in top_langs.chunks(2) {
+                    let mut row_items = Vec::new();
 
-            y += Self::ROW_Y_STEP;
+                    for (col_index, stat) in chunk.iter().enumerate() {
+                        let color = gel_language_color(&stat.name);
+                        let label = &stat.name;
+                        let rank = stat.rank(
+                            self.size_weight.unwrap_or(1.0),
+                            self.count_weight.unwrap_or(0.0),
+                        );
+                        // Value is the percentage of the total rank.
+                        let value = (rank / total_rank * 100.0).round();
+
+                        let x_offset = self.card_settings.offset_x
+                            + col_index as u32
+                                * (Self::VERTICAL_COLUMN_WIDTH + Self::VERTICAL_COLUMN_GAP);
+
+                        row_items.push(Self::render_line_vertical(
+                            &color, label, value, x_offset, y,
+                        ));
+                    }
+
+                    lines.push(format!("<g class=\"row\">\n{}\n</g>", row_items.join("\n")));
+                    y += Self::VERTICAL_ROW_Y_STEP;
+                }
+            }
         }
 
         let body = lines.join("\n");
 
         // TODO: Note height calculation is 3px smaller than the actual height. Need to fix it.
-        let height = if self.card_settings.hide_title {
-            Self::ROW_Y_STEP * top_langs.len() as u32 + self.card_settings.offset_y * 2
-        } else {
-            Self::ROW_Y_STEP * top_langs.len() as u32
-                + header_size_y
-                + self.card_settings.offset_y * 2
+        let height = match self.layout {
+            LayoutType::Horizontal => {
+                if self.card_settings.hide_title {
+                    Self::ROW_Y_STEP * top_langs.len() as u32 + self.card_settings.offset_y * 2
+                } else {
+                    Self::ROW_Y_STEP * top_langs.len() as u32
+                        + header_size_y
+                        + self.card_settings.offset_y * 2
+                }
+            }
+            LayoutType::Vertical => {
+                // For vertical layout, we group by 2 per row, so we need to calculate the number of rows
+                let num_rows = (top_langs.len() + 1) / 2; // Ceiling division
+                if self.card_settings.hide_title {
+                    Self::VERTICAL_ROW_Y_STEP * num_rows as u32 + self.card_settings.offset_y * 2
+                } else {
+                    Self::VERTICAL_ROW_Y_STEP * num_rows as u32
+                        + header_size_y
+                        + self.card_settings.offset_y * 2
+                }
+            }
         };
 
-        let width: u32 = Self::HORIZONTAL_BAR_WIDTH
-            + self.card_settings.offset_x * 2
-            + Self::HORIZONTAL_VALUE_X_OFFSET
-            + Self::VALUE_SIZE;
+        let width: u32 = match self.layout {
+            LayoutType::Horizontal => {
+                Self::HORIZONTAL_BAR_WIDTH
+                    + self.card_settings.offset_x * 2
+                    + Self::HORIZONTAL_VALUE_X_OFFSET
+                    + Self::VALUE_SIZE
+            }
+            LayoutType::Vertical => {
+                // Width for 2 columns with gap
+                Self::VERTICAL_COLUMN_WIDTH * 2
+                    + Self::VERTICAL_COLUMN_GAP
+                    + self.card_settings.offset_x * 2
+            }
+        };
 
         let card = Card::new(
             width,
@@ -221,12 +278,13 @@ impl LangsCard {
         pos_x: u32,
         pos_y: u32,
     ) -> String {
+        let bar_height = 8;
         let label_x = pos_x + 2;
-        let label_y = pos_y + 18;
+        let label_y = pos_y;
         let percent_x = pos_x + Self::HORIZONTAL_BAR_WIDTH + Self::HORIZONTAL_VALUE_X_OFFSET;
-        let percent_y = pos_y + Self::ROW_Y_STEP - 2;
+        let percent_y = pos_y + bar_height * 2;
         let bar_container_x = pos_x;
-        let bar_container_y = pos_y + 25;
+        let bar_container_y = pos_y + bar_height;
         let bar_width: u32 = Self::HORIZONTAL_BAR_WIDTH;
 
         let percent_str = format!("{value:.2}%");
@@ -237,10 +295,31 @@ impl LangsCard {
   <text x="{label_x}" y="{label_y}" class="label">{label}</text>
   <text x="{percent_x}" y="{percent_y}" class="value">{percent_str}</text>
   <svg width="{bar_width}" x="{bar_container_x}" y="{bar_container_y}">
-      <rect rx="5" ry="5" x="0" y="0" width="{bar_width}" height="8" class="progressBarBackground"/>
-      <rect rx="5" ry="5" x="0" y="0" width="{percent_bar_width}" height="8" fill="{color}"/>
+      <rect rx="5" ry="5" x="0" y="0" width="{bar_width}" height="{bar_height}" class="progressBarBackground"/>
+      <rect rx="5" ry="5" x="0" y="0" width="{percent_bar_width}" height="{bar_height}" fill="{color}"/>
   </svg>
 </g>"##
+        )
+    }
+
+    fn render_line_vertical(
+        color: &str,
+        label: &str,
+        value: f64,
+        pos_x: u32,
+        pos_y: u32,
+    ) -> String {
+        let circle_x = pos_x + Self::VERTICAL_CIRCLE_SIZE / 2;
+        let circle_y = pos_y + Self::VERTICAL_CIRCLE_SIZE / 2;
+        let label_x = pos_x + Self::VERTICAL_CIRCLE_SIZE + Self::VERTICAL_CIRCLE_TEXT_GAP;
+        let label_y = pos_y + 4;
+
+        let percent_str = format!("{value:.2}%");
+
+        format!(
+            r##"<circle cx="{circle_x}" cy="{circle_y}" r="{}" fill="{color}"/>
+<text x="{label_x}" y="{label_y}" class="label">{label} {percent_str}</text>"##,
+            Self::VERTICAL_CIRCLE_SIZE / 2
         )
     }
 }
@@ -463,16 +542,16 @@ mod tests {
             // Basic structure
             assert!(rendered.contains("<g class=\"row\">"));
             // Label and its coordinates
-            assert!(rendered.contains("x=\"12\" y=\"38\" class=\"label\">Rust</text>"));
+            assert!(rendered.contains("x=\"12\" y=\"20\" class=\"label\">Rust</text>"));
             // Percentage text and its coordinates, formatted to 2 decimals
-            assert!(rendered.contains("x=\"240\" y=\"54\" class=\"value\">30.55%</text>"));
+            assert!(rendered.contains("x=\"240\" y=\"36\" class=\"value\">30.55%</text>"));
             // Bar container position and width
-            assert!(rendered.contains("<svg width=\"220\" x=\"10\" y=\"45\">"));
+            assert!(rendered.contains("<svg width=\"220\" x=\"10\" y=\"28\">"));
             // Background bar
             assert!(
                 rendered.contains("width=\"220\" height=\"8\" class=\"progressBarBackground\"")
             );
-            // Foreground bar width rounding: round(220 * 30.55 / 100) = 63
+            // Foreground bar width rounding: round(220 * 30.55 / 100) = 67
             assert!(rendered.contains("width=\"67\" height=\"8\" fill=\"#00ADD8\""));
         }
     }
@@ -531,6 +610,84 @@ mod tests {
             assert!(svg.contains("width=\"66\" height=\"8\" fill=\"#f1e05a\""));
             // Rust should not appear since max_languages is 2
             assert!(!svg.contains(">Rust</text>"));
+        }
+    }
+
+    mod fn_render_line_vertical {
+        use super::*;
+
+        #[test]
+        fn test_render_line_vertical() {
+            let color = "#00ADD8";
+            let label = "Rust";
+            let value = 30.55;
+            let pos_x = 10;
+            let pos_y = 20;
+
+            let rendered = LangsCard::render_line_vertical(color, label, value, pos_x, pos_y);
+            // Circle with correct position and color
+            assert!(rendered.contains("cx=\"14\" cy=\"24\" r=\"4\" fill=\"#00ADD8\""));
+            // Label and percentage in the same text element
+            assert!(rendered.contains("x=\"28\" y=\"24\" class=\"label\">Rust 30.55%</text>"));
+        }
+    }
+
+    mod fn_render_vertical_layout {
+        use super::*;
+        use crate::cards::card::{CardSettings, CardTheme};
+
+        #[test]
+        fn test_render_vertical_layout() {
+            let card = LangsCard {
+                card_settings: CardSettings {
+                    offset_x: 10,
+                    offset_y: 20,
+                    hide_title: false,
+                    theme: CardTheme::TransparentBlue,
+                    hide_background: false,
+                    hide_background_stroke: false,
+                },
+                layout: LayoutType::Vertical,
+                stats: vec![
+                    LanguageStat {
+                        name: "Rust".to_string(),
+                        size_bytes: 1000,
+                        repo_count: 10,
+                    },
+                    LanguageStat {
+                        name: "Go".to_string(),
+                        size_bytes: 2000,
+                        repo_count: 5,
+                    },
+                    LanguageStat {
+                        name: "JavaScript".to_string(),
+                        size_bytes: 1300,
+                        repo_count: 8,
+                    },
+                    LanguageStat {
+                        name: "Python".to_string(),
+                        size_bytes: 800,
+                        repo_count: 3,
+                    },
+                ],
+                size_weight: Some(1.0),
+                count_weight: Some(0.0),
+                max_languages: Some(4),
+            };
+
+            let svg = card.render();
+            // Basic SVG structure and title
+            assert!(svg.contains("<svg"));
+            assert!(svg.contains("Most used languages"));
+            // Should have 2 rows (4 languages grouped by 2)
+            assert_eq!(svg.matches("<g class=\"row\">").count(), 2);
+            // Top languages should appear
+            assert!(svg.contains(">Go"));
+            assert!(svg.contains(">JavaScript"));
+            assert!(svg.contains(">Rust"));
+            assert!(svg.contains(">Python"));
+            // Should have circles for each language
+            assert_eq!(svg.matches("<circle").count(), 4);
         }
     }
 }
