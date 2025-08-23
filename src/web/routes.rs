@@ -9,10 +9,10 @@ use serde::Deserialize;
 use std::{collections::HashSet, str::FromStr};
 
 use crate::cards::card::{CardSettings, CardTheme};
+use crate::cards::error_card::ErrorCard;
 use crate::cards::langs_card::{LangsCard, LayoutType};
 use crate::cards::stats_card::StatsCard;
-use crate::cards::error_card::ErrorCard;
-use crate::github_stats::{fetch_github_stats, fetch_github_language_stats};
+use crate::github_stats::{fetch_github_language_stats, fetch_github_stats};
 
 use card_theme_macros::build_theme_query;
 
@@ -48,24 +48,24 @@ async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
 
     // Validate hide parameters first (before making API calls)
     let mut to_hide: HashSet<HideStat> = HashSet::new();
-    if let Some(hide_str) = q.hide.as_deref() {
-        if !hide_str.trim().is_empty() {
-            for token in hide_str.split(',') {
-                let token = token.trim();
-                if token.is_empty() {
-                    continue;
+    if let Some(hide_str) = q.hide.as_deref()
+        && !hide_str.trim().is_empty()
+    {
+        for token in hide_str.split(',') {
+            let token = token.trim();
+            if token.is_empty() {
+                continue;
+            }
+            match HideStat::from_str(token) {
+                Ok(v) => {
+                    to_hide.insert(v);
                 }
-                match HideStat::from_str(token) {
-                    Ok(v) => {
-                        to_hide.insert(v);
-                    }
-                    Err(_) => {
-                        return (
-                            StatusCode::BAD_REQUEST,
-                            Json(serde_json::json!({"error": format!("invalid hide value: {}", token)})),
-                        )
-                            .into_response();
-                    }
+                Err(_) => {
+                    return (
+                        StatusCode::BAD_REQUEST,
+                        Json(serde_json::json!({"error": format!("invalid hide value: {}", token)})),
+                    )
+                        .into_response();
                 }
             }
         }
@@ -169,7 +169,10 @@ async fn get_langs_card(Query(q): Query<LangsCardQuery>) -> impl IntoResponse {
     let stats = match fetch_github_language_stats(&q.username).await {
         Ok(stats) => stats,
         Err(e) => {
-            eprintln!("Failed to fetch GitHub language stats for {}: {}", q.username, e);
+            eprintln!(
+                "Failed to fetch GitHub language stats for {}: {}",
+                q.username, e
+            );
             // Return error card instead of stub data
             let error_card = ErrorCard::new(
                 "Most used languages".to_string(),
@@ -576,7 +579,7 @@ mod tests {
             assert_eq!(resp.status(), StatusCode::OK);
             let body = resp.into_body().collect().await.unwrap().to_bytes();
             let body_str = String::from_utf8(body.to_vec()).unwrap();
-            
+
             // Verify it's a proper SVG with expected structure
             assert!(body_str.contains("<svg"));
             assert!(body_str.contains("@erroruser: GitHub Stats"));
@@ -780,7 +783,7 @@ mod tests {
             assert_eq!(resp.status(), StatusCode::OK);
             let body = resp.into_body().collect().await.unwrap().to_bytes();
             let body_str = String::from_utf8(body.to_vec()).unwrap();
-            
+
             // Verify it's a proper SVG with expected structure
             assert!(body_str.contains("<svg"));
             assert!(body_str.contains("</svg>"));

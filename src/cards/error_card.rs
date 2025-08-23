@@ -27,7 +27,7 @@ impl ErrorCard {
     /// Renders the [ErrorCard] as an [Svg] string.
     pub fn render(&self) -> Svg {
         let body = self.render_body();
-        
+
         let card = Card::new(
             Self::WIDTH,
             Self::HEIGHT,
@@ -74,7 +74,9 @@ impl ErrorCard {
             let line_y = text_y + (i as u32 * Self::MESSAGE_LINE_HEIGHT);
             message_elements.push_str(&format!(
                 r#"<text x="{}" y="{}" class="error-message" font-size="12">{}</text>"#,
-                text_x, line_y, html_escape::encode_text(line)
+                text_x,
+                line_y,
+                html_escape::encode_text(line)
             ));
         }
 
@@ -92,13 +94,16 @@ impl ErrorCard {
     fn render_error_icon(&self, x: u32, y: u32) -> String {
         let points = format!(
             "{},{} {},{} {},{}",
-            x + Self::ERROR_ICON_SIZE / 2, y,                            // top point
-            x, y + Self::ERROR_ICON_SIZE,                                // bottom left
-            x + Self::ERROR_ICON_SIZE, y + Self::ERROR_ICON_SIZE,       // bottom right
+            x + Self::ERROR_ICON_SIZE / 2,
+            y, // top point
+            x,
+            y + Self::ERROR_ICON_SIZE, // bottom left
+            x + Self::ERROR_ICON_SIZE,
+            y + Self::ERROR_ICON_SIZE, // bottom right
         );
         let text_x = x + Self::ERROR_ICON_SIZE / 2;
         let text_y = y + Self::ERROR_ICON_SIZE / 2 + 1;
-        
+
         format!(
             concat!(
                 "<g class=\"error-icon\">",
@@ -116,11 +121,11 @@ impl ErrorCard {
         let mut current_line = String::new();
 
         for word in text.split_whitespace() {
-            if current_line.len() + word.len() + 1 > max_width {
-                if !current_line.is_empty() {
-                    lines.push(current_line.clone());
-                    current_line.clear();
-                }
+            if current_line.len() + word.len() + 1 > max_width
+                && !current_line.is_empty()
+            {
+                lines.push(current_line.clone());
+                current_line.clear();
             }
             if !current_line.is_empty() {
                 current_line.push(' ');
@@ -202,7 +207,10 @@ mod tests {
             },
         );
 
-        let lines = card.wrap_text("This is a very long error message that should be wrapped", 20);
+        let lines = card.wrap_text(
+            "This is a very long error message that should be wrapped",
+            20,
+        );
         assert!(lines.len() > 1);
         assert!(lines.iter().all(|line| line.len() <= 25)); // Allow some flexibility
     }

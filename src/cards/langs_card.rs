@@ -6,6 +6,7 @@ use std::{cmp::Ordering, collections::HashMap};
 
 /// Represents an edge in the language statistics graph.
 /// Consist of language name and its size in bytes.
+#[allow(dead_code)]
 pub struct LangEdge {
     /// Main name of the programming language in the repository.
     /// Should correspond to the name in the `assets/configs/language-colors.json` file.
@@ -29,6 +30,7 @@ pub struct LanguageStat {
 impl LanguageStat {
     /// Converts a vector of [LangEdge] to a vector of [LanguageStat] by grouping
     /// languages, summing their sizes, and counting their occurrences.
+    #[allow(dead_code)]
     pub fn from_edges(edges: Vec<LangEdge>) -> Vec<Self> {
         let mut stats_map: HashMap<String, LanguageStat> = HashMap::new();
 
@@ -246,7 +248,7 @@ impl LangsCard {
             }
             LayoutType::Horizontal => {
                 // For horizontal layout, we have a bar + grouped labels (2 per row)
-                let num_rows = (top_langs.len() + 1) / 2; // Ceiling division for label rows
+                let num_rows = top_langs.len().div_ceil(2); // Ceiling division for label rows
 
                 if self.card_settings.hide_title {
                     Self::BAR_HEIGHT
