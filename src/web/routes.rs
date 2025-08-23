@@ -63,7 +63,9 @@ async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
                 Err(_) => {
                     return (
                         StatusCode::BAD_REQUEST,
-                        Json(serde_json::json!({"error": format!("invalid hide value: {}", token)})),
+                        Json(
+                            serde_json::json!({"error": format!("invalid hide value: {}", token)}),
+                        ),
                     )
                         .into_response();
                 }

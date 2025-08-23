@@ -121,9 +121,7 @@ impl ErrorCard {
         let mut current_line = String::new();
 
         for word in text.split_whitespace() {
-            if current_line.len() + word.len() + 1 > max_width
-                && !current_line.is_empty()
-            {
+            if current_line.len() + word.len() + 1 > max_width && !current_line.is_empty() {
                 lines.push(current_line.clone());
                 current_line.clear();
             }

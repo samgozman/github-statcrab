@@ -31,8 +31,7 @@ struct GitHubRepo {
 struct GitHubLanguages(HashMap<String, u64>);
 
 /// GitHub statistics for the stats card
-#[derive(Debug)]
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct GitHubStats {
     pub stars_count: Option<u32>,
     pub commits_ytd_count: Option<u32>,
