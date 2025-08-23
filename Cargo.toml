@@ -19,8 +19,9 @@ tokio = { version = "1.47.1", features = ["rt-multi-thread", "macros"] }
 card_theme_macros = { path = "./card_theme_macros" }
 reqwest = { version = "0.12.22", default-features = false, features = [
   "blocking",
+  "json", 
   "rustls-tls",
-], optional = true }
+] }
 serde_yaml = { version = "0.9.34-deprecated", optional = true }
 
 [dev-dependencies]
@@ -43,7 +44,7 @@ required-features = ["gen-language-colors"]
 
 [features]
 default = []
-gen-language-colors = ["dep:reqwest", "dep:serde_yaml"]
+gen-language-colors = ["dep:serde_yaml"]
 
 # ---------------------------------------------------------------------------
 # Tooling metadata (not used by Cargo directly). This documents external dev

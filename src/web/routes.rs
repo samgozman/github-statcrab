@@ -11,6 +11,7 @@ use std::{collections::HashSet, str::FromStr};
 use crate::cards::card::{CardSettings, CardTheme};
 use crate::cards::langs_card::{LangsCard, LanguageStat, LayoutType};
 use crate::cards::stats_card::StatsCard;
+use crate::github_stats::{fetch_github_stats, fetch_github_language_stats};
 
 use card_theme_macros::build_theme_query;
 
@@ -44,15 +45,34 @@ async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
     // Build card settings from query (with defaults applied)
     let settings = q.settings.into_settings();
 
-    // Default values (demo)
-    let mut stars_count = Some(2400);
-    let mut commits_ytd_count = Some(123);
-    let mut issues_count = Some(123);
-    let mut pull_requests_count = Some(123);
-    let mut merge_requests_count = Some(123);
-    let mut reviews_count = Some(123);
-    let mut started_discussions_count = Some(123);
-    let mut answered_discussions_count = Some(123);
+    // Fetch real GitHub stats
+    let github_stats = match fetch_github_stats(&q.username).await {
+        Ok(stats) => stats,
+        Err(e) => {
+            eprintln!("Failed to fetch GitHub stats for {}: {}", q.username, e);
+            // Fall back to demo values on error
+            crate::github_stats::GitHubStats {
+                stars_count: Some(2400),
+                commits_ytd_count: Some(123),
+                issues_count: Some(123),
+                pull_requests_count: Some(123),
+                merge_requests_count: Some(123),
+                reviews_count: Some(123),
+                started_discussions_count: Some(123),
+                answered_discussions_count: Some(123),
+            }
+        }
+    };
+
+    // Use fetched values
+    let mut stars_count = github_stats.stars_count;
+    let mut commits_ytd_count = github_stats.commits_ytd_count;
+    let mut issues_count = github_stats.issues_count;
+    let mut pull_requests_count = github_stats.pull_requests_count;
+    let mut merge_requests_count = github_stats.merge_requests_count;
+    let mut reviews_count = github_stats.reviews_count;
+    let mut started_discussions_count = github_stats.started_discussions_count;
+    let mut answered_discussions_count = github_stats.answered_discussions_count;
 
     // Parse and apply hide list
     if let Some(hide_str) = q.hide.as_deref() {
@@ -159,28 +179,36 @@ async fn get_langs_card(Query(q): Query<LangsCardQuery>) -> impl IntoResponse {
     // Build card settings from query (with defaults applied)
     let settings = q.settings.into_settings();
 
-    let stats_stub = vec![
-        LanguageStat {
-            name: "Rust".to_string(),
-            size_bytes: 1000,
-            repo_count: 10,
-        },
-        LanguageStat {
-            name: "Go".to_string(),
-            size_bytes: 2000,
-            repo_count: 5,
-        },
-        LanguageStat {
-            name: "JavaScript".to_string(),
-            size_bytes: 1300,
-            repo_count: 8,
-        },
-    ];
+    // Fetch real GitHub language stats
+    let stats = match fetch_github_language_stats(&q.username).await {
+        Ok(stats) => stats,
+        Err(e) => {
+            eprintln!("Failed to fetch GitHub language stats for {}: {}", q.username, e);
+            // Fall back to demo values on error
+            vec![
+                LanguageStat {
+                    name: "Rust".to_string(),
+                    size_bytes: 1000,
+                    repo_count: 10,
+                },
+                LanguageStat {
+                    name: "Go".to_string(),
+                    size_bytes: 2000,
+                    repo_count: 5,
+                },
+                LanguageStat {
+                    name: "JavaScript".to_string(),
+                    size_bytes: 1300,
+                    repo_count: 8,
+                },
+            ]
+        }
+    };
 
     let svg = LangsCard {
         card_settings: settings,
         layout: q.layout.unwrap_or(LayoutTypeQuery::Vertical).into(),
-        stats: stats_stub,
+        stats,
         size_weight: q.size_weight,
         count_weight: q.count_weight,
         max_languages: q.max_languages,

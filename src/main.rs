@@ -1,4 +1,5 @@
 mod cards;
+mod github_stats;
 mod web;
 
 use axum::serve;
