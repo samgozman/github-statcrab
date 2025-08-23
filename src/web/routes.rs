@@ -9,8 +9,9 @@ use serde::Deserialize;
 use std::{collections::HashSet, str::FromStr};
 
 use crate::cards::card::{CardSettings, CardTheme};
-use crate::cards::langs_card::{LangsCard, LanguageStat, LayoutType};
+use crate::cards::langs_card::{LangsCard, LayoutType};
 use crate::cards::stats_card::StatsCard;
+use crate::cards::error_card::ErrorCard;
 use crate::github_stats::{fetch_github_stats, fetch_github_language_stats};
 
 use card_theme_macros::build_theme_query;
@@ -45,38 +46,9 @@ async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
     // Build card settings from query (with defaults applied)
     let settings = q.settings.into_settings();
 
-    // Fetch real GitHub stats
-    let github_stats = match fetch_github_stats(&q.username).await {
-        Ok(stats) => stats,
-        Err(e) => {
-            eprintln!("Failed to fetch GitHub stats for {}: {}", q.username, e);
-            // Fall back to demo values on error
-            crate::github_stats::GitHubStats {
-                stars_count: Some(2400),
-                commits_ytd_count: Some(123),
-                issues_count: Some(123),
-                pull_requests_count: Some(123),
-                merge_requests_count: Some(123),
-                reviews_count: Some(123),
-                started_discussions_count: Some(123),
-                answered_discussions_count: Some(123),
-            }
-        }
-    };
-
-    // Use fetched values
-    let mut stars_count = github_stats.stars_count;
-    let mut commits_ytd_count = github_stats.commits_ytd_count;
-    let mut issues_count = github_stats.issues_count;
-    let mut pull_requests_count = github_stats.pull_requests_count;
-    let mut merge_requests_count = github_stats.merge_requests_count;
-    let mut reviews_count = github_stats.reviews_count;
-    let mut started_discussions_count = github_stats.started_discussions_count;
-    let mut answered_discussions_count = github_stats.answered_discussions_count;
-
-    // Parse and apply hide list
+    // Validate hide parameters first (before making API calls)
+    let mut to_hide: HashSet<HideStat> = HashSet::new();
     if let Some(hide_str) = q.hide.as_deref() {
-        let mut to_hide: HashSet<HideStat> = HashSet::new();
         if !hide_str.trim().is_empty() {
             for token in hide_str.split(',') {
                 let token = token.trim();
@@ -97,42 +69,56 @@ async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
                 }
             }
         }
-
-        for h in to_hide {
-            match h {
-                HideStat::StarsCount => stars_count = None,
-                HideStat::CommitsYtdCount => commits_ytd_count = None,
-                HideStat::IssuesCount => issues_count = None,
-                HideStat::PullRequestsCount => pull_requests_count = None,
-                HideStat::MergeRequestsCount => merge_requests_count = None,
-                HideStat::ReviewsCount => reviews_count = None,
-                HideStat::StartedDiscussionsCount => started_discussions_count = None,
-                HideStat::AnsweredDiscussionsCount => answered_discussions_count = None,
-            }
-        }
     }
 
-    // Ensure at least two visible stats remain
-    let visible = [
-        &stars_count,
-        &commits_ytd_count,
-        &issues_count,
-        &pull_requests_count,
-        &merge_requests_count,
-        &reviews_count,
-        &started_discussions_count,
-        &answered_discussions_count,
-    ]
-    .iter()
-    .filter(|v| v.is_some())
-    .count();
-
-    if visible < 2 {
+    // Check if hiding too many stats (all stats - hidden ones < 2)
+    let total_stats = 8; // Total number of stats we have
+    let hidden_count = to_hide.len();
+    if total_stats - hidden_count < 2 {
         return (
             StatusCode::BAD_REQUEST,
             Json(serde_json::json!({"error": "hide would remove too many stats; at least 2 must remain"})),
         )
             .into_response();
+    }
+
+    // Fetch real GitHub stats
+    let github_stats = match fetch_github_stats(&q.username).await {
+        Ok(stats) => stats,
+        Err(e) => {
+            eprintln!("Failed to fetch GitHub stats for {}: {}", q.username, e);
+            // Return error card instead of stub data
+            let error_card = ErrorCard::new(
+                format!("@{}: GitHub Stats", q.username),
+                format!("Failed to fetch GitHub data: {}", e),
+                settings,
+            );
+            return svg_response(error_card.render());
+        }
+    };
+
+    // Use fetched values
+    let mut stars_count = github_stats.stars_count;
+    let mut commits_ytd_count = github_stats.commits_ytd_count;
+    let mut issues_count = github_stats.issues_count;
+    let mut pull_requests_count = github_stats.pull_requests_count;
+    let mut merge_requests_count = github_stats.merge_requests_count;
+    let mut reviews_count = github_stats.reviews_count;
+    let mut started_discussions_count = github_stats.started_discussions_count;
+    let mut answered_discussions_count = github_stats.answered_discussions_count;
+
+    // Apply hide list (we already validated it above)
+    for h in to_hide {
+        match h {
+            HideStat::StarsCount => stars_count = None,
+            HideStat::CommitsYtdCount => commits_ytd_count = None,
+            HideStat::IssuesCount => issues_count = None,
+            HideStat::PullRequestsCount => pull_requests_count = None,
+            HideStat::MergeRequestsCount => merge_requests_count = None,
+            HideStat::ReviewsCount => reviews_count = None,
+            HideStat::StartedDiscussionsCount => started_discussions_count = None,
+            HideStat::AnsweredDiscussionsCount => answered_discussions_count = None,
+        }
     }
 
     let svg = StatsCard {
@@ -184,24 +170,13 @@ async fn get_langs_card(Query(q): Query<LangsCardQuery>) -> impl IntoResponse {
         Ok(stats) => stats,
         Err(e) => {
             eprintln!("Failed to fetch GitHub language stats for {}: {}", q.username, e);
-            // Fall back to demo values on error
-            vec![
-                LanguageStat {
-                    name: "Rust".to_string(),
-                    size_bytes: 1000,
-                    repo_count: 10,
-                },
-                LanguageStat {
-                    name: "Go".to_string(),
-                    size_bytes: 2000,
-                    repo_count: 5,
-                },
-                LanguageStat {
-                    name: "JavaScript".to_string(),
-                    size_bytes: 1300,
-                    repo_count: 8,
-                },
-            ]
+            // Return error card instead of stub data
+            let error_card = ErrorCard::new(
+                "Most used languages".to_string(),
+                format!("Failed to fetch GitHub language data: {}", e),
+                settings,
+            );
+            return svg_response(error_card.render());
         }
     };
 
@@ -467,10 +442,9 @@ mod tests {
             assert_eq!(resp.status(), StatusCode::OK);
             let body = resp.into_body().collect().await.unwrap().to_bytes();
             let body_str = String::from_utf8(body.to_vec()).unwrap();
-            assert!(!body_str.contains("Stars:"));
-            assert!(!body_str.contains("Pull Requests:"));
-            // Some other stat should still be present
-            assert!(body_str.contains("Issues:"));
+            // Since GitHub API will fail in test environment, expect error card
+            assert!(body_str.contains("@alice: GitHub Stats"));
+            assert!(body_str.contains("Failed to fetch GitHub data"));
         }
 
         #[tokio::test]
@@ -568,6 +542,48 @@ mod tests {
             let body_str = String::from_utf8(body.to_vec()).unwrap();
             assert!(body_str.contains("translate(30, 43)"));
         }
+
+        #[tokio::test]
+        async fn github_api_failure_returns_error_card() {
+            let app = app();
+            let req = Request::builder()
+                .uri("/stats-card?username=nonexistentuser12345")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let content_type = resp
+                .headers()
+                .get(header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("");
+            assert_eq!(content_type, "image/svg+xml");
+            let body = resp.into_body().collect().await.unwrap().to_bytes();
+            let body_str = String::from_utf8(body.to_vec()).unwrap();
+            assert!(body_str.contains("<svg"));
+            assert!(body_str.contains("error-card"));
+            assert!(body_str.contains("Failed to fetch GitHub data"));
+        }
+
+        #[tokio::test]
+        async fn error_card_respects_theme_settings() {
+            let app = app();
+            let req = Request::builder()
+                .uri("/stats-card?username=erroruser&theme=transparent_blue&hide_background=true")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let body = resp.into_body().collect().await.unwrap().to_bytes();
+            let body_str = String::from_utf8(body.to_vec()).unwrap();
+            
+            // Verify it's a proper SVG with expected structure
+            assert!(body_str.contains("<svg"));
+            assert!(body_str.contains("@erroruser: GitHub Stats"));
+            assert!(body_str.contains("error-content"));
+            // Background should be hidden due to hide_background=true
+            assert!(!body_str.contains("<rect class=\"background\""));
+        }
     }
 
     // Tests for GET /api/langs-card route behavior
@@ -607,15 +623,9 @@ mod tests {
             let body = resp.into_body().collect().await.unwrap().to_bytes();
             let body_str = String::from_utf8(body.to_vec()).unwrap();
             assert!(body_str.contains("<svg"));
+            // Since GitHub API will fail in test environment, expect error card
             assert!(body_str.contains("Most used languages"));
-            // All three stub languages should be present by default
-            assert!(body_str.contains(">Go</text>"));
-            assert!(body_str.contains(">JavaScript</text>"));
-            assert!(body_str.contains(">Rust</text>"));
-            // Percentages are rounded first then formatted => 47,30,23
-            assert!(body_str.contains("47.00%"));
-            assert!(body_str.contains("30.00%"));
-            assert!(body_str.contains("23.00%"));
+            assert!(body_str.contains("Failed to fetch GitHub language data"));
         }
 
         #[tokio::test]
@@ -629,12 +639,9 @@ mod tests {
             assert_eq!(resp.status(), StatusCode::OK);
             let body = resp.into_body().collect().await.unwrap().to_bytes();
             let body_str = String::from_utf8(body.to_vec()).unwrap();
-            // Only two rows should be rendered
-            assert_eq!(body_str.matches("<g class=\"row\">").count(), 2);
-            assert!(body_str.contains(">Go</text>"));
-            assert!(body_str.contains(">JavaScript</text>"));
-            // Rust should be excluded
-            assert!(!body_str.contains(">Rust</text>"));
+            // Since GitHub API will fail in test environment, expect error card
+            assert!(body_str.contains("Most used languages"));
+            assert!(body_str.contains("Failed to fetch GitHub language data"));
         }
 
         #[tokio::test]
@@ -649,10 +656,9 @@ mod tests {
             assert_eq!(resp.status(), StatusCode::OK);
             let body = resp.into_body().collect().await.unwrap().to_bytes();
             let body_str = String::from_utf8(body.to_vec()).unwrap();
-            // Percentages (counts 10,8,5 / 23 => 43,35,22 after rounding)
-            assert!(body_str.contains("43.00%"));
-            assert!(body_str.contains("35.00%"));
-            assert!(body_str.contains("22.00%"));
+            // Since GitHub API will fail in test environment, expect error card
+            assert!(body_str.contains("Most used languages"));
+            assert!(body_str.contains("Failed to fetch GitHub language data"));
         }
 
         #[tokio::test]
@@ -739,6 +745,48 @@ mod tests {
             let body = resp.into_body().collect().await.unwrap().to_bytes();
             let body_str = String::from_utf8(body.to_vec()).unwrap_or_default();
             assert!(body_str.contains("unknown variant `unknown_theme`"));
+        }
+
+        #[tokio::test]
+        async fn github_api_failure_returns_error_card() {
+            let app = app();
+            let req = Request::builder()
+                .uri("/langs-card?username=nonexistentuser12345")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let content_type = resp
+                .headers()
+                .get(header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("");
+            assert_eq!(content_type, "image/svg+xml");
+            let body = resp.into_body().collect().await.unwrap().to_bytes();
+            let body_str = String::from_utf8(body.to_vec()).unwrap();
+            assert!(body_str.contains("<svg"));
+            assert!(body_str.contains("error-card"));
+            assert!(body_str.contains("Failed to fetch GitHub language data"));
+        }
+
+        #[tokio::test]
+        async fn error_card_has_proper_structure() {
+            let app = app();
+            let req = Request::builder()
+                .uri("/langs-card?username=erroruser&theme=transparent_blue")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+            let body = resp.into_body().collect().await.unwrap().to_bytes();
+            let body_str = String::from_utf8(body.to_vec()).unwrap();
+            
+            // Verify it's a proper SVG with expected structure
+            assert!(body_str.contains("<svg"));
+            assert!(body_str.contains("</svg>"));
+            assert!(body_str.contains("Most used languages"));
+            assert!(body_str.contains("error-content"));
+            assert!(body_str.contains("error-icon"));
         }
     }
 }

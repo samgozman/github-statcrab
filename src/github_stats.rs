@@ -63,17 +63,28 @@ pub async fn fetch_github_stats(username: &str) -> Result<GitHubStats> {
     let client = reqwest::Client::new();
     let mut stats = GitHubStats::default();
 
+    // Get API token if available
+    let auth_header = get_auth_header();
+
     // Fetch user's repositories to calculate total stars
     let repos_url = format!("https://api.github.com/users/{}/repos?per_page=100", username);
-    let repos: Vec<GitHubRepo> = client
+    let mut request = client
         .get(&repos_url)
-        .header("User-Agent", "github-statcrab")
+        .header("User-Agent", "github-statcrab/0.1.0");
+    
+    if let Some(auth) = auth_header {
+        request = request.header("Authorization", auth);
+    }
+
+    let repos: Vec<GitHubRepo> = request
         .send()
         .await
-        .context("Failed to fetch repositories")?
+        .context("Failed to fetch repositories from GitHub API. Check username or API rate limits.")?
+        .error_for_status()
+        .context("GitHub API returned an error. User might not exist or API rate limit exceeded.")?
         .json()
         .await
-        .context("Failed to parse repositories JSON")?;
+        .context("Failed to parse GitHub API response")?;
 
     // Calculate total stars and issues
     let total_stars: u32 = repos.iter().map(|repo| repo.stargazers_count).sum();
@@ -98,17 +109,28 @@ pub async fn fetch_github_stats(username: &str) -> Result<GitHubStats> {
 pub async fn fetch_github_language_stats(username: &str) -> Result<Vec<LanguageStat>> {
     let client = reqwest::Client::new();
 
+    // Get API token if available
+    let auth_header = get_auth_header();
+
     // Fetch user's repositories
     let repos_url = format!("https://api.github.com/users/{}/repos?per_page=100", username);
-    let repos: Vec<GitHubRepo> = client
+    let mut request = client
         .get(&repos_url)
-        .header("User-Agent", "github-statcrab")
+        .header("User-Agent", "github-statcrab/0.1.0");
+    
+    if let Some(auth) = auth_header.as_ref() {
+        request = request.header("Authorization", auth);
+    }
+
+    let repos: Vec<GitHubRepo> = request
         .send()
         .await
-        .context("Failed to fetch repositories")?
+        .context("Failed to fetch repositories from GitHub API. Check username or API rate limits.")?
+        .error_for_status()
+        .context("GitHub API returned an error. User might not exist or API rate limit exceeded.")?
         .json()
         .await
-        .context("Failed to parse repositories JSON")?;
+        .context("Failed to parse GitHub API response")?;
 
     let mut language_stats: HashMap<String, LanguageStat> = HashMap::new();
 
@@ -118,12 +140,15 @@ pub async fn fetch_github_language_stats(username: &str) -> Result<Vec<LanguageS
             // Fetch detailed language breakdown for the repository
             let languages_url = format!("https://api.github.com/repos/{}/{}/languages", username, repo.name);
             
-            if let Ok(response) = client
+            let mut lang_request = client
                 .get(&languages_url)
-                .header("User-Agent", "github-statcrab")
-                .send()
-                .await
-            {
+                .header("User-Agent", "github-statcrab/0.1.0");
+            
+            if let Some(auth) = auth_header.as_ref() {
+                lang_request = lang_request.header("Authorization", auth);
+            }
+            
+            if let Ok(response) = lang_request.send().await {
                 if let Ok(languages) = response.json::<GitHubLanguages>().await {
                     for (lang_name, size_bytes) in languages.0 {
                         let entry = language_stats
@@ -207,4 +232,29 @@ mod tests {
             }
         }
     }
+
+    #[tokio::test]
+    async fn test_get_auth_header_without_token() {
+        // Ensure no GITHUB_TOKEN is set for this test
+        unsafe { std::env::remove_var("GITHUB_TOKEN"); }
+        assert_eq!(get_auth_header(), None);
+    }
+
+    #[tokio::test]
+    async fn test_get_auth_header_with_token() {
+        // Set a test token
+        unsafe { 
+            std::env::set_var("GITHUB_TOKEN", "test_token_12345");
+            assert_eq!(get_auth_header(), Some("Bearer test_token_12345".to_string()));
+            // Clean up
+            std::env::remove_var("GITHUB_TOKEN");
+        }
+    }
+}
+
+/// Gets the Authorization header value if GITHUB_TOKEN is set
+fn get_auth_header() -> Option<String> {
+    std::env::var("GITHUB_TOKEN")
+        .ok()
+        .map(|token| format!("Bearer {}", token))
 }
