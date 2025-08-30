@@ -32,10 +32,10 @@ fn main() -> Result<()> {
     // Build colors map preserving key order (BTreeMap gives sorted order)
     let mut colors: BTreeMap<String, String> = BTreeMap::new();
     for (lang, meta) in langs.into_iter() {
-        if let Some(c) = meta.color {
-            if !c.trim().is_empty() {
-                colors.insert(lang, c);
-            }
+        if let Some(c) = meta.color
+            && !c.trim().is_empty()
+        {
+            colors.insert(lang, c);
         }
     }
 
@@ -97,10 +97,10 @@ NoColorLang:
         assert_eq!(langs.len(), 4);
         let mut colors: BTreeMap<String, String> = BTreeMap::new();
         for (lang, meta) in langs.into_iter() {
-            if let Some(c) = meta.color {
-                if !c.trim().is_empty() {
-                    colors.insert(lang, c);
-                }
+            if let Some(c) = meta.color
+                && !c.trim().is_empty()
+            {
+                colors.insert(lang, c);
             }
         }
         assert_eq!(colors.len(), 3);

@@ -246,7 +246,7 @@ impl LangsCard {
             }
             LayoutType::Horizontal => {
                 // For horizontal layout, we have a bar + grouped labels (2 per row)
-                let num_rows = (top_langs.len() + 1) / 2; // Ceiling division for label rows
+                let num_rows = top_langs.len().div_ceil(2); // Ceiling division for label rows
 
                 if self.card_settings.hide_title {
                     Self::BAR_HEIGHT
@@ -495,7 +495,7 @@ mod tests {
 
         #[test]
         fn test_ranked() {
-            let stats = vec![
+            let stats = [
                 LanguageStat {
                     name: "Rust".to_string(),
                     size_bytes: 1000,
@@ -526,7 +526,7 @@ mod tests {
 
         #[test]
         fn test_top_n_2_size_1_count_0() {
-            let stats = vec![
+            let stats = [
                 LanguageStat {
                     name: "Rust".to_string(),
                     size_bytes: 1000,
@@ -552,7 +552,7 @@ mod tests {
 
         #[test]
         fn test_top_n_2_size_0_count_1() {
-            let stats = vec![
+            let stats = [
                 LanguageStat {
                     name: "Rust".to_string(),
                     size_bytes: 1000,
@@ -578,7 +578,7 @@ mod tests {
 
         #[test]
         fn test_top_n_2_size_0_5_count_0_5() {
-            let stats = vec![
+            let stats = [
                 LanguageStat {
                     name: "Rust".to_string(),
                     size_bytes: 1000,
