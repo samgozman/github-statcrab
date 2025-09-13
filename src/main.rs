@@ -1,6 +1,6 @@
 mod cards;
-mod web;
 mod github;
+mod web;
 
 use axum::serve;
 use std::net::SocketAddr;
@@ -10,7 +10,7 @@ use tokio::net::TcpListener;
 async fn main() {
     // Load environment variables from .env file if it exists
     dotenvy::dotenv().ok();
-    
+
     let app = web::app_router();
 
     // Bind address (0.0.0.0 to be accessible in containers; localhost otherwise)
