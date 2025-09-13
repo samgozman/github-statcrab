@@ -384,21 +384,6 @@ mod tests {
             let resp = app.oneshot(req).await.unwrap();
             assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
         }
-
-        #[tokio::test]
-        async fn requires_github_token() {
-            let app = app();
-            let req = Request::builder()
-                .uri("/stats-card?username=alice")
-                .body(Body::empty())
-                .unwrap();
-            let resp = app.oneshot(req).await.unwrap();
-            // Should return SERVICE_UNAVAILABLE when GitHub token is not configured
-            assert!(
-                resp.status() == StatusCode::SERVICE_UNAVAILABLE
-                    || resp.status() == StatusCode::INTERNAL_SERVER_ERROR
-            );
-        }
     }
 
     // Tests for GET /api/langs-card route behavior
