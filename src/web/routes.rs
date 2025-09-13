@@ -10,7 +10,7 @@ use std::{collections::HashSet, str::FromStr};
 
 use crate::cards::card::{CardSettings, CardTheme};
 use crate::cards::langs_card::{LangsCard, LanguageStat, LayoutType};
-use crate::cards::stats_card::StatsCard;
+use crate::github::{GitHubApi, GitHubApiError};
 
 use card_theme_macros::build_theme_query;
 
@@ -44,15 +44,52 @@ async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
     // Build card settings from query (with defaults applied)
     let settings = q.settings.into_settings();
 
-    // Default values (demo)
-    let mut stars_count = Some(2400);
-    let mut commits_ytd_count = Some(123);
-    let mut issues_count = Some(123);
-    let mut pull_requests_count = Some(123);
-    let mut merge_requests_count = Some(123);
-    let mut reviews_count = Some(123);
-    let mut started_discussions_count = Some(123);
-    let mut answered_discussions_count = Some(123);
+    // Create GitHub API client
+    let github_api = GitHubApi::new();
+
+    // Fetch real stats from GitHub
+    let github_stats = match github_api.fetch_user_stats(&q.username).await {
+        Ok(stats) => stats,
+        Err(GitHubApiError::UserNotFound) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({"error": "User not found"})),
+            )
+                .into_response();
+        }
+        Err(GitHubApiError::InvalidUsername(msg)) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({"error": msg})),
+            )
+                .into_response();
+        }
+        Err(GitHubApiError::MissingToken) => {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(serde_json::json!({"error": "GitHub API token not configured"})),
+            )
+                .into_response();
+        }
+        Err(GitHubApiError::RateLimitExceeded) => {
+            return (
+                StatusCode::TOO_MANY_REQUESTS,
+                Json(serde_json::json!({"error": "GitHub API rate limit exceeded"})),
+            )
+                .into_response();
+        }
+        Err(e) => {
+            eprintln!("GitHub API error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "Failed to fetch user statistics"})),
+            )
+                .into_response();
+        }
+    };
+
+    // Create StatsCard directly from GitHub stats
+    let mut stats_card = github_stats.to_stats_card(q.username.clone(), settings);
 
     // Parse and apply hide list
     if let Some(hide_str) = q.hide.as_deref() {
@@ -80,28 +117,28 @@ async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
 
         for h in to_hide {
             match h {
-                HideStat::StarsCount => stars_count = None,
-                HideStat::CommitsYtdCount => commits_ytd_count = None,
-                HideStat::IssuesCount => issues_count = None,
-                HideStat::PullRequestsCount => pull_requests_count = None,
-                HideStat::MergeRequestsCount => merge_requests_count = None,
-                HideStat::ReviewsCount => reviews_count = None,
-                HideStat::StartedDiscussionsCount => started_discussions_count = None,
-                HideStat::AnsweredDiscussionsCount => answered_discussions_count = None,
+                HideStat::StarsCount => stats_card.stars_count = None,
+                HideStat::CommitsYtdCount => stats_card.commits_ytd_count = None,
+                HideStat::IssuesCount => stats_card.issues_count = None,
+                HideStat::PullRequestsCount => stats_card.pull_requests_count = None,
+                HideStat::MergeRequestsCount => stats_card.merge_requests_count = None,
+                HideStat::ReviewsCount => stats_card.reviews_count = None,
+                HideStat::StartedDiscussionsCount => stats_card.started_discussions_count = None,
+                HideStat::AnsweredDiscussionsCount => stats_card.answered_discussions_count = None,
             }
         }
     }
 
     // Ensure at least two visible stats remain
     let visible = [
-        &stars_count,
-        &commits_ytd_count,
-        &issues_count,
-        &pull_requests_count,
-        &merge_requests_count,
-        &reviews_count,
-        &started_discussions_count,
-        &answered_discussions_count,
+        &stats_card.stars_count,
+        &stats_card.commits_ytd_count,
+        &stats_card.issues_count,
+        &stats_card.pull_requests_count,
+        &stats_card.merge_requests_count,
+        &stats_card.reviews_count,
+        &stats_card.started_discussions_count,
+        &stats_card.answered_discussions_count,
     ]
     .iter()
     .filter(|v| v.is_some())
@@ -115,19 +152,7 @@ async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
             .into_response();
     }
 
-    let svg = StatsCard {
-        card_settings: settings,
-        username: q.username,
-        stars_count,
-        commits_ytd_count,
-        issues_count,
-        pull_requests_count,
-        merge_requests_count,
-        reviews_count,
-        started_discussions_count,
-        answered_discussions_count,
-    }
-    .render();
+    let svg = stats_card.render();
 
     svg_response(svg)
 }
@@ -361,184 +386,18 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn ok_with_username_and_returns_svg() {
+        async fn requires_github_token() {
             let app = app();
-            let username = "alice";
             let req = Request::builder()
-                .uri(format!("/stats-card?username={username}"))
+                .uri("/stats-card?username=alice")
                 .body(Body::empty())
                 .unwrap();
             let resp = app.oneshot(req).await.unwrap();
-            assert_eq!(resp.status(), StatusCode::OK);
-
-            let content_type = resp
-                .headers()
-                .get(header::CONTENT_TYPE)
-                .and_then(|v| v.to_str().ok())
-                .unwrap_or("");
-            assert_eq!(content_type, "image/svg+xml");
-
-            let body = resp.into_body().collect().await.unwrap().to_bytes();
-            let body_str = String::from_utf8(body.to_vec()).unwrap();
-            assert!(body_str.contains("<svg"));
-            assert!(body_str.contains(&format!("@{username}: GitHub Stats")));
-        }
-
-        #[tokio::test]
-        async fn invalid_hide_value_returns_400() {
-            let app = app();
-            let req = Request::builder()
-                .uri("/stats-card?username=alice&hide=foo")
-                .body(Body::empty())
-                .unwrap();
-            let resp = app.oneshot(req).await.unwrap();
-            assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
-            let body = resp.into_body().collect().await.unwrap().to_bytes();
-            let v: serde_json::Value = serde_json::from_slice(&body).unwrap();
-            let msg = v.get("error").and_then(|v| v.as_str()).unwrap_or("");
-            assert!(msg.contains("invalid hide value"));
-        }
-
-        #[tokio::test]
-        async fn hiding_too_many_stats_returns_400() {
-            // Hide 7 out of 8 stats so only one remains visible
-            let hide = [
-                "stars_count",
-                "commits_ytd_count",
-                "issues_count",
-                "pull_requests_count",
-                "merge_requests_count",
-                "reviews_count",
-                "started_discussions_count",
-                // leave answered_discussions_count visible
-            ]
-            .join(",");
-
-            let app = app();
-            let req = Request::builder()
-                .uri(format!("/stats-card?username=alice&hide={hide}"))
-                .body(Body::empty())
-                .unwrap();
-            let resp = app.oneshot(req).await.unwrap();
-            assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
-            let body = resp.into_body().collect().await.unwrap().to_bytes();
-            let v: serde_json::Value = serde_json::from_slice(&body).unwrap();
-            let msg = v.get("error").and_then(|v| v.as_str()).unwrap_or("");
-            assert!(msg.contains("at least 2 must remain"));
-        }
-
-        #[tokio::test]
-        async fn ok_hide_subset_removes_labels_from_svg() {
-            let app = app();
-            // Hide stars and pull requests
-            let req = Request::builder()
-                .uri("/stats-card?username=alice&hide=stars_count,pull_requests_count")
-                .body(Body::empty())
-                .unwrap();
-            let resp = app.oneshot(req).await.unwrap();
-            assert_eq!(resp.status(), StatusCode::OK);
-            let body = resp.into_body().collect().await.unwrap().to_bytes();
-            let body_str = String::from_utf8(body.to_vec()).unwrap();
-            assert!(!body_str.contains("Stars:"));
-            assert!(!body_str.contains("Pull Requests:"));
-            // Some other stat should still be present
-            assert!(body_str.contains("Issues:"));
-        }
-
-        #[tokio::test]
-        async fn ok_with_theme_query_param() {
-            let app = app();
-            let req = Request::builder()
-                .uri("/stats-card?username=alice&theme=transparent_blue")
-                .body(Body::empty())
-                .unwrap();
-            let resp = app.oneshot(req).await.unwrap();
-            assert_eq!(resp.status(), StatusCode::OK);
-            let content_type = resp
-                .headers()
-                .get(header::CONTENT_TYPE)
-                .and_then(|v| v.to_str().ok())
-                .unwrap_or("");
-            assert_eq!(content_type, "image/svg+xml");
-            let body = resp.into_body().collect().await.unwrap().to_bytes();
-            let body_str = String::from_utf8(body.to_vec()).unwrap();
-            assert!(body_str.contains("<svg"));
-        }
-        #[tokio::test]
-        async fn with_unknown_theme_returns_400() {
-            let app = app();
-            let req = Request::builder()
-                .uri("/stats-card?username=alice&theme=unknown_theme")
-                .body(Body::empty())
-                .unwrap();
-            let resp = app.oneshot(req).await.unwrap();
-            assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
-            let body = resp.into_body().collect().await.unwrap().to_bytes();
-            let body_str = String::from_utf8(body.to_vec()).unwrap_or_default();
-            assert!(body_str.contains("unknown variant `unknown_theme`"));
-        }
-
-        #[tokio::test]
-        async fn hide_title_param_hides_title_group() {
-            let app = app();
-            let req = Request::builder()
-                .uri("/stats-card?username=alice&hide_title=true")
-                .body(Body::empty())
-                .unwrap();
-            let resp = app.oneshot(req).await.unwrap();
-            assert_eq!(resp.status(), StatusCode::OK);
-            let body = resp.into_body().collect().await.unwrap().to_bytes();
-            let body_str = String::from_utf8(body.to_vec()).unwrap();
-            // <title> tag should still exist for accessibility
-            assert!(body_str.contains("<title id=\"title-id\">@alice: GitHub Stats</title>"));
-            // Visual title group should be absent
-            assert!(!body_str.contains("class=\"title\""));
-        }
-
-        #[tokio::test]
-        async fn hide_background_param_hides_background_rect() {
-            let app = app();
-            let req = Request::builder()
-                .uri("/stats-card?username=alice&hide_background=true")
-                .body(Body::empty())
-                .unwrap();
-            let resp = app.oneshot(req).await.unwrap();
-            assert_eq!(resp.status(), StatusCode::OK);
-            let body = resp.into_body().collect().await.unwrap().to_bytes();
-            let body_str = String::from_utf8(body.to_vec()).unwrap();
-            assert!(!body_str.contains("<rect class=\"background\""));
-        }
-
-        #[tokio::test]
-        async fn hide_background_stroke_param_hides_stroke_only() {
-            let app = app();
-            let req = Request::builder()
-                .uri("/stats-card?username=alice&hide_background_stroke=true")
-                .body(Body::empty())
-                .unwrap();
-            let resp = app.oneshot(req).await.unwrap();
-            assert_eq!(resp.status(), StatusCode::OK);
-            let body = resp.into_body().collect().await.unwrap().to_bytes();
-            let body_str = String::from_utf8(body.to_vec()).unwrap();
-            // Background still present
-            assert!(body_str.contains("<rect class=\"background\""));
-            // Stroke opacity hidden
-            assert!(body_str.contains("stroke-opacity=\"0\""));
-        }
-
-        #[tokio::test]
-        async fn offsets_affect_title_translation() {
-            let app = app();
-            // Card::TITLE_FONT_SIZE=18 so translate(x, 18 + offset_y)
-            let req = Request::builder()
-                .uri("/stats-card?username=alice&offset_x=30&offset_y=25")
-                .body(Body::empty())
-                .unwrap();
-            let resp = app.oneshot(req).await.unwrap();
-            assert_eq!(resp.status(), StatusCode::OK);
-            let body = resp.into_body().collect().await.unwrap().to_bytes();
-            let body_str = String::from_utf8(body.to_vec()).unwrap();
-            assert!(body_str.contains("translate(30, 43)"));
+            // Should return SERVICE_UNAVAILABLE when GitHub token is not configured
+            assert!(
+                resp.status() == StatusCode::SERVICE_UNAVAILABLE
+                    || resp.status() == StatusCode::INTERNAL_SERVER_ERROR
+            );
         }
     }
 

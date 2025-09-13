@@ -45,6 +45,9 @@ jobs:
       matrix:
         os:
           - ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TEST_GITHUB_USERNAME: samgozman
     steps:
       - uses: actions/checkout@v4
 
@@ -52,7 +55,7 @@ jobs:
         with:
           toolchain: 1.88.0
 
-      - name: Run unit tests
+      - name: Run tests
         run: make test
         timeout-minutes: 10
 
