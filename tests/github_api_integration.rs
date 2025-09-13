@@ -99,3 +99,99 @@ async fn test_invalid_username_validation() {
         ),
     }
 }
+
+#[tokio::test]
+async fn test_fetch_user_languages_real_user() {
+    common::setup_integration_test();
+
+    let api = GitHubApi::new();
+    let username = common::get_test_username();
+
+    let result = api.fetch_user_languages(&username, &[]).await;
+
+    match result {
+        Ok(languages) => {
+            // Should have at least some languages for a real user
+            assert!(!languages.is_empty());
+
+            // Each language should have valid data
+            for lang in &languages {
+                assert!(!lang.name.is_empty());
+                assert!(lang.repo_count > 0);
+                // size_bytes should be > 0 for real language data
+                assert!(lang.size_bytes > 0);
+            }
+
+            println!(
+                "✓ Successfully fetched {} languages for {}",
+                languages.len(),
+                username
+            );
+            if !languages.is_empty() {
+                println!(
+                    "  Top language: {} (repos: {}, size: {})",
+                    languages[0].name, languages[0].repo_count, languages[0].size_bytes
+                );
+            }
+        }
+        Err(e) => panic!("Failed to fetch user languages: {:?}", e),
+    }
+}
+
+#[tokio::test]
+async fn test_fetch_user_languages_with_excludes() {
+    common::setup_integration_test();
+
+    let api = GitHubApi::new();
+    let username = common::get_test_username();
+
+    // First get all languages
+    let all_languages = api
+        .fetch_user_languages(&username, &[])
+        .await
+        .expect("Failed to fetch all languages");
+
+    if all_languages.is_empty() {
+        println!("No languages found for user, skipping exclude test");
+        return;
+    }
+
+    // Now exclude some fictional repositories
+    let exclude_repos = vec![
+        "nonexistent-repo-1".to_string(),
+        "nonexistent-repo-2".to_string(),
+    ];
+    let filtered_languages = api
+        .fetch_user_languages(&username, &exclude_repos)
+        .await
+        .expect("Failed to fetch filtered languages");
+
+    // Since we're excluding non-existent repos, results should be the same
+    assert_eq!(all_languages.len(), filtered_languages.len());
+
+    println!("✓ Successfully tested language exclusion");
+}
+
+#[tokio::test]
+async fn test_fetch_user_languages_nonexistent_user() {
+    common::setup_integration_test();
+
+    let api = GitHubApi::new();
+    let username = common::get_invalid_username();
+
+    let result = api.fetch_user_languages(&username, &[]).await;
+
+    match result {
+        Err(GitHubApiError::UserNotFound) => {
+            println!(
+                "✓ Correctly identified nonexistent user for languages: {}",
+                username
+            );
+        }
+        Ok(_) => panic!(
+            "Expected UserNotFound error but got success for user: {}",
+            username
+        ),
+        Err(e) => panic!("Expected UserNotFound error but got: {:?}", e),
+    }
+}

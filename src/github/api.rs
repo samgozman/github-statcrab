@@ -9,6 +9,12 @@ pub struct GitHubApi {
     token: Option<String>,
 }
 
+impl Default for GitHubApi {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GitHubApi {
     /// Create a new GitHub API client
     pub fn new() -> Self {
@@ -126,6 +132,35 @@ impl GitHubApi {
         "#.to_string()
     }
 
+    /// Get the GraphQL query for fetching user languages
+    fn get_languages_query() -> String {
+        r#"
+        query GetUserLanguages($login: String!, $after: String) {
+            user(login: $login) {
+                repositories(ownerAffiliations: OWNER, isFork: false, first: 100, after: $after) {
+                    nodes {
+                        name
+                        languages(first: 10, orderBy: {field: SIZE, direction: DESC}) {
+                            edges {
+                                size
+                                node {
+                                    color
+                                    name
+                                }
+                            }
+                        }
+                    }
+                    pageInfo {
+                        hasNextPage
+                        endCursor
+                    }
+                }
+            }
+        }
+        "#
+        .to_string()
+    }
+
     /// Execute a GraphQL query
     async fn execute_query<T>(
         &self,
@@ -178,13 +213,13 @@ impl GitHubApi {
             self.execute_query(&query, variables).await?;
 
         // Handle GraphQL errors
-        if let Some(errors) = response.errors {
-            if let Some(error) = errors.first() {
-                if error.error_type.as_deref() == Some("NOT_FOUND") {
-                    return Err(GitHubApiError::UserNotFound);
-                }
-                return Err(GitHubApiError::GraphQLError(error.message.clone()));
+        if let Some(errors) = response.errors
+            && let Some(error) = errors.first()
+        {
+            if error.error_type.as_deref() == Some("NOT_FOUND") {
+                return Err(GitHubApiError::UserNotFound);
             }
+            return Err(GitHubApiError::GraphQLError(error.message.clone()));
         }
 
         let user_response = response.data.ok_or(GitHubApiError::GraphQLError(
@@ -245,6 +280,76 @@ impl GitHubApi {
                 .map_or(0, |rdc| rdc.total_count),
             followers: user.followers.total_count,
         };
+
+        Ok(stats)
+    }
+
+    /// Fetch user languages from GitHub
+    pub async fn fetch_user_languages(
+        &self,
+        username: &str,
+        exclude_repos: &[String],
+    ) -> Result<Vec<crate::cards::langs_card::LanguageStat>, GitHubApiError> {
+        Self::validate_username(username)?;
+
+        let mut all_repos = Vec::new();
+        let mut after_cursor: Option<String> = None;
+        let mut has_next_page = true;
+
+        // Fetch all repositories with languages (handle pagination)
+        while has_next_page {
+            let variables = json!({
+                "login": username,
+                "after": after_cursor
+            });
+
+            let query = Self::get_languages_query();
+            let response: GraphQLResponse<LanguagesQueryResponse> =
+                self.execute_query(&query, variables).await?;
+
+            // Handle GraphQL errors
+            if let Some(errors) = response.errors
+                && let Some(error) = errors.first()
+            {
+                if error.error_type.as_deref() == Some("NOT_FOUND") {
+                    return Err(GitHubApiError::UserNotFound);
+                }
+                return Err(GitHubApiError::GraphQLError(error.message.clone()));
+            }
+
+            let user_response = response.data.ok_or(GitHubApiError::GraphQLError(
+                "No data in response".to_string(),
+            ))?;
+            let user = user_response.user.ok_or(GitHubApiError::UserNotFound)?;
+
+            all_repos.extend(user.repositories.nodes);
+            has_next_page = user.repositories.page_info.has_next_page;
+            after_cursor = user.repositories.page_info.end_cursor;
+        }
+
+        // Create a set for quick lookup of excluded repositories
+        let exclude_set: std::collections::HashSet<&String> = exclude_repos.iter().collect();
+
+        // Create LangEdge structs using the existing pattern
+        let mut edges = Vec::new();
+
+        for repo in all_repos {
+            // Skip excluded repositories
+            if exclude_set.contains(&repo.name) {
+                continue;
+            }
+
+            // Process language edges for this repository
+            for edge in repo.languages.edges {
+                edges.push(crate::cards::langs_card::LangEdge {
+                    name: edge.node.name,
+                    size_bytes: edge.size,
+                });
+            }
+        }
+
+        // Use the existing from_edges method to convert to LanguageStat
+        let stats = crate::cards::langs_card::LanguageStat::from_edges(edges);
 
         Ok(stats)
     }

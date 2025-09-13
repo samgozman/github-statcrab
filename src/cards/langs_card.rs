@@ -171,7 +171,7 @@ impl LangsCard {
                         self.count_weight.unwrap_or(0.0),
                     );
                     // Value is the percentage of the total rank.
-                    let value = (rank / total_rank * 100.0).round();
+                    let value = rank / total_rank * 100.0;
 
                     lines.push(Self::render_line_vertical(
                         &color,
@@ -214,7 +214,7 @@ impl LangsCard {
                             self.count_weight.unwrap_or(0.0),
                         );
                         // Value is the percentage of the total rank.
-                        let value = (rank / total_rank * 100.0).round();
+                        let value = rank / total_rank * 100.0;
 
                         let x_offset = self.card_settings.offset_x
                             + col_index as u32
@@ -679,11 +679,11 @@ mod tests {
             // Top languages and percentages
             assert!(svg.contains(">Go</text>"));
             assert!(svg.contains(">JavaScript</text>"));
-            assert!(svg.contains(">47.00%</text>"));
-            assert!(svg.contains(">30.00%</text>"));
-            // Progress bar widths for 47% and 30% on 220px width
-            assert!(svg.contains("width=\"103\" height=\"8\" fill=\"#00ADD8\""));
-            assert!(svg.contains("width=\"66\" height=\"8\" fill=\"#f1e05a\""));
+            assert!(svg.contains(">46.51%</text>"));
+            assert!(svg.contains(">30.23%</text>"));
+            // Progress bar widths for 46.51% and 30.23% on 220px width
+            assert!(svg.contains("width=\"102\" height=\"8\" fill=\"#00ADD8\""));
+            assert!(svg.contains("width=\"67\" height=\"8\" fill=\"#f1e05a\""));
             // Rust should not appear since max_languages is 2
             assert!(!svg.contains(">Rust</text>"));
         }

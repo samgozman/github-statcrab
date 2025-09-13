@@ -78,6 +78,11 @@ pub struct UserQueryResponse {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct LanguagesQueryResponse {
+    pub user: Option<LanguagesUserData>,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct UserData {
     pub name: Option<String>,
     pub login: String,
@@ -115,8 +120,6 @@ pub struct CountableConnection {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct RepositoriesConnection {
-    #[serde(rename = "totalCount")]
-    pub total_count: u32,
     pub nodes: Vec<RepositoryNode>,
     #[serde(rename = "pageInfo")]
     pub page_info: PageInfo,
@@ -124,7 +127,6 @@ pub struct RepositoriesConnection {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct RepositoryNode {
-    pub name: String,
     pub stargazers: CountableConnection,
 }
 
@@ -134,4 +136,39 @@ pub struct PageInfo {
     pub has_next_page: bool,
     #[serde(rename = "endCursor")]
     pub end_cursor: Option<String>,
+}
+
+// Language-specific types
+#[derive(Debug, Deserialize)]
+pub struct LanguagesUserData {
+    pub repositories: LanguageRepositoriesConnection,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LanguageRepositoriesConnection {
+    pub nodes: Vec<LanguageRepositoryNode>,
+    #[serde(rename = "pageInfo")]
+    pub page_info: PageInfo,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LanguageRepositoryNode {
+    pub name: String,
+    pub languages: LanguagesConnection,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LanguagesConnection {
+    pub edges: Vec<LanguageEdge>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LanguageEdge {
+    pub size: usize,
+    pub node: LanguageNode,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LanguageNode {
+    pub name: String,
 }
