@@ -127,9 +127,9 @@ impl LangsCard {
 
     // Horizontal layout constants
     const HORIZONTAL_COLUMN_WIDTH: u32 = 130;
-    const HORIZONTAL_COLUMN_GAP: u32 = 20;
+    const HORIZONTAL_COLUMN_GAP: u32 = 16;
     const HORIZONTAL_CIRCLE_SIZE: u32 = 8;
-    const HORIZONTAL_CIRCLE_TEXT_GAP: u32 = 10;
+    const HORIZONTAL_CIRCLE_TEXT_GAP: u32 = 6;
     const HORIZONTAL_ROW_Y_STEP: u32 = 25;
 
     pub fn render(&self) -> Svg {
@@ -705,7 +705,7 @@ mod tests {
             // Circle with correct position and color (circle_y = pos_y = 20, not pos_y + circle_size/2)
             assert!(rendered.contains("cx=\"14\" cy=\"20\" r=\"4\" fill=\"#00ADD8\""));
             // Label and percentage in the same text element
-            assert!(rendered.contains("x=\"28\" y=\"24\" class=\"label\">Rust 30.55%</text>"));
+            assert!(rendered.contains("x=\"24\" y=\"24\" class=\"label\">Rust 30.55%</text>"));
         }
     }
 
