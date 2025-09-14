@@ -191,7 +191,6 @@ impl LangsCard {
 
                 lines.push(Self::render_horizontal_bar(
                     &top_langs,
-                    total_rank,
                     self.size_weight.unwrap_or(1.0),
                     self.count_weight.unwrap_or(0.0),
                     self.card_settings.offset_x,
@@ -347,7 +346,6 @@ impl LangsCard {
 
     fn render_horizontal_bar(
         stats: &[LanguageStat],
-        total_rank: f64,
         size_weight: f64,
         count_weight: f64,
         pos_x: u32,
@@ -358,12 +356,15 @@ impl LangsCard {
         let mut segments = Vec::new();
         let mut current_x = 0f64;
 
+        // Calculate total rank from reduced stats slice to calculate percentages width properly
+        let relative_total_rank = stats.total_rank(size_weight, count_weight);
+
         // Calculate all percentages first
         let percentages: Vec<f64> = stats
             .iter()
             .map(|stat| {
                 let rank = stat.rank(size_weight, count_weight);
-                rank / total_rank * 100.0
+                rank / relative_total_rank * 100.0
             })
             .collect();
 
@@ -790,9 +791,8 @@ mod tests {
                 },
             ];
 
-            let total_rank = 2000.0 + 1300.0 + 1000.0; // 4300.0
             let rendered = LangsCard::render_horizontal_bar(
-                &stats, total_rank, 1.0, 0.0, 10,  // pos_x
+                &stats, 1.0, 0.0, 10,  // pos_x
                 20,  // pos_y
                 280, // total_width
             );
