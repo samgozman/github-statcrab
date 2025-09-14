@@ -688,6 +688,96 @@ mod tests {
             // Rust should not appear since max_languages is 2
             assert!(!svg.contains(">Rust</text>"));
         }
+
+        #[test]
+        fn test_render_max_languages_does_not_affect_calculations() {
+            let stats = vec![
+                LanguageStat {
+                    name: "Rust".to_string(),
+                    size_bytes: 1000,
+                    repo_count: 10,
+                },
+                LanguageStat {
+                    name: "Go".to_string(),
+                    size_bytes: 2000,
+                    repo_count: 5,
+                },
+                LanguageStat {
+                    name: "JavaScript".to_string(),
+                    size_bytes: 1300,
+                    repo_count: 8,
+                },
+                LanguageStat {
+                    name: "Python".to_string(),
+                    size_bytes: 800,
+                    repo_count: 3,
+                },
+            ];
+
+            // Create card that shows only top 2 languages
+            let card_max_2 = LangsCard {
+                card_settings: CardSettings {
+                    offset_x: 10,
+                    offset_y: 20,
+                    hide_title: false,
+                    theme: CardTheme::TransparentBlue,
+                    hide_background: false,
+                    hide_background_stroke: false,
+                },
+                layout: LayoutType::Vertical,
+                stats: stats.clone(),
+                size_weight: Some(1.0),
+                count_weight: Some(0.0),
+                max_languages: Some(2),
+            };
+
+            // Create card that shows all 4 languages
+            let card_max_4 = LangsCard {
+                card_settings: CardSettings {
+                    offset_x: 10,
+                    offset_y: 20,
+                    hide_title: false,
+                    theme: CardTheme::TransparentBlue,
+                    hide_background: false,
+                    hide_background_stroke: false,
+                },
+                layout: LayoutType::Vertical,
+                stats: stats.clone(),
+                size_weight: Some(1.0),
+                count_weight: Some(0.0),
+                max_languages: Some(4),
+            };
+
+            let svg_max_2 = card_max_2.render();
+            let svg_max_4 = card_max_4.render();
+
+            // Both cards should show the same percentages for the top 2 languages
+            // because percentages are calculated from the total rank of all stats,
+            // not just the displayed ones
+
+            // Go should have the same percentage in both cards
+            assert!(svg_max_2.contains(">39.22%</text>"));
+            assert!(svg_max_4.contains(">39.22%</text>"));
+
+            // JavaScript should have the same percentage in both cards
+            assert!(svg_max_2.contains(">25.49%</text>"));
+            assert!(svg_max_4.contains(">25.49%</text>"));
+
+            // Only card with max_languages=2 should have 2 rows
+            assert_eq!(svg_max_2.matches("<g class=\"row\">").count(), 2);
+            // Card with max_languages=4 should have 4 rows
+            assert_eq!(svg_max_4.matches("<g class=\"row\">").count(), 4);
+
+            // Card with max_languages=2 should not contain Rust or Python
+            assert!(!svg_max_2.contains(">Rust</text>"));
+            assert!(!svg_max_2.contains(">Python</text>"));
+
+            // Card with max_languages=4 should contain all languages
+            assert!(svg_max_4.contains(">Go</text>"));
+            assert!(svg_max_4.contains(">JavaScript</text>"));
+            assert!(svg_max_4.contains(">Rust</text>"));
+            assert!(svg_max_4.contains(">Python</text>"));
+        }
     }
 
     mod fn_render_line_horizontal {
