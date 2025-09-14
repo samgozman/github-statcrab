@@ -1,0 +1,9 @@
+# Note: This Dockerfile creates a minimal container for the Rust application build inside a CI/CD pipeline.
+
+FROM gcr.io/distroless/cc-debian12
+
+# Copy the Rust server binary from the build context
+COPY target/release/server /app
+
+# Set the entrypoint
+CMD ["./app"]
