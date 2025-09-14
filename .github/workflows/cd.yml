@@ -40,7 +40,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: server-binary-${{ matrix.target }}
-          path: target/release/server
+          path: target/${{ matrix.target }}/release/server
           retention-days: 1
 
   build-and-push-docker:
