@@ -4,6 +4,7 @@ use std::env;
 
 use crate::github::types::*;
 
+#[derive(Debug)]
 pub struct GitHubApi {
     client: Client,
     token: Option<String>,
@@ -162,6 +163,7 @@ impl GitHubApi {
     }
 
     /// Execute a GraphQL query
+    #[tracing::instrument(name = "github_api_request", skip(self, query, variables))]
     async fn execute_query<T>(
         &self,
         query: &str,
@@ -177,6 +179,23 @@ impl GitHubApi {
             "variables": variables
         });
 
+        // Add Sentry context for the API request
+        sentry::configure_scope(|scope| {
+            scope.set_tag("github_api", "graphql");
+            scope.set_context(
+                "github_request",
+                sentry::protocol::Context::Other({
+                    let mut map = std::collections::BTreeMap::new();
+                    map.insert(
+                        "endpoint".to_string(),
+                        "https://api.github.com/graphql".into(),
+                    );
+                    map.insert("variables".to_string(), variables.to_string().into());
+                    map
+                }),
+            );
+        });
+
         let response = self
             .client
             .post("https://api.github.com/graphql")
@@ -184,21 +203,52 @@ impl GitHubApi {
             .header("User-Agent", "github-statcrab")
             .json(&payload)
             .send()
-            .await?;
+            .await
+            .map_err(|e| {
+                // Report network errors to Sentry
+                sentry::capture_error(&e);
+                tracing::error!("GitHub API network error: {e}");
+                GitHubApiError::NetworkError(e)
+            })?;
 
         if response.status() == reqwest::StatusCode::UNAUTHORIZED {
             return Err(GitHubApiError::MissingToken);
         }
 
         if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
+            // Rate limit info for debugging
+            let reset_time = response
+                .headers()
+                .get("x-ratelimit-reset")
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("unknown");
+
+            sentry::configure_scope(|scope| {
+                scope.set_extra("rate_limit_reset", reset_time.into());
+            });
+
             return Err(GitHubApiError::RateLimitExceeded);
         }
 
-        let response_body: GraphQLResponse<T> = response.json().await?;
+        // Check for other HTTP errors
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_msg = format!("GitHub API returned HTTP {status}");
+            sentry::capture_message(&error_msg, sentry::Level::Error);
+            tracing::error!("{error_msg}");
+        }
+
+        let response_body: GraphQLResponse<T> = response.json().await.map_err(|e| {
+            sentry::capture_error(&e);
+            tracing::error!("Failed to parse GitHub API response: {e}");
+            GitHubApiError::NetworkError(e)
+        })?;
+
         Ok(response_body)
     }
 
     /// Fetch user statistics from GitHub
+    #[tracing::instrument(name = "fetch_user_stats", fields(username = %username))]
     pub async fn fetch_user_stats(&self, username: &str) -> Result<GitHubStats, GitHubApiError> {
         Self::validate_username(username)?;
 
@@ -285,6 +335,7 @@ impl GitHubApi {
     }
 
     /// Fetch user languages from GitHub
+    #[tracing::instrument(name = "fetch_user_languages", fields(username = %username, excluded_repos = exclude_repos.len()))]
     pub async fn fetch_user_languages(
         &self,
         username: &str,

@@ -21,6 +21,13 @@ This guide will help you set up and run the `github-statcrab` server, as well as
    TEST_GITHUB_USERNAME=your_github_username
    ```
 
+   You can also set optional Sentry configuration for error tracking.
+
+   ```env
+   SENTRY_DSN=your_sentry_dsn_here
+   SENTRY_ENVIRONMENT=development
+   ```
+
 3. Get a GitHub Personal Access Token:
    - Go to GitHub Settings > Developer settings > Personal access tokens
    - Generate a new token with `public_repo` and `read:user` scopes

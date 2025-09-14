@@ -5,7 +5,7 @@ use card_theme_macros::build_card_themes;
 build_card_themes!();
 
 /// CardSettings holds unique settings for the [Card].
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CardSettings {
     /// Offset X (pixels) is used to offset the position of the [Card] in the SVG relative to its container by X axis.
     pub offset_x: u32,

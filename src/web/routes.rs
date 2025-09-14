@@ -31,7 +31,31 @@ pub struct StatsCardQuery {
     hide: Option<String>,
 }
 
+#[tracing::instrument(name = "stats_card_request", fields(username = %q.username))]
 async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
+    // Add user context to Sentry
+    sentry::configure_scope(|scope| {
+        scope.set_user(Some(sentry::User {
+            username: Some(q.username.clone()),
+            ..Default::default()
+        }));
+        scope.set_tag("card_type", "stats");
+        scope.set_context(
+            "request_params",
+            sentry::protocol::Context::Other({
+                let mut map = std::collections::BTreeMap::new();
+                map.insert("username".to_string(), q.username.clone().into());
+                if let Some(theme) = &q.settings.theme {
+                    map.insert("theme".to_string(), format!("{:?}", theme).into());
+                }
+                if let Some(hide) = &q.hide {
+                    map.insert("hide".to_string(), hide.clone().into());
+                }
+                map
+            }),
+        );
+    });
+
     // Validate username
     if let Err(e) = validate_username(&q.username) {
         return (
@@ -72,6 +96,11 @@ async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
                 .into_response();
         }
         Err(GitHubApiError::RateLimitExceeded) => {
+            // Report rate limit exceeded to Sentry as it's an operational issue
+            sentry::capture_message(
+                &format!("GitHub API rate limit exceeded for user: {}", q.username),
+                sentry::Level::Warning,
+            );
             return (
                 StatusCode::TOO_MANY_REQUESTS,
                 Json(serde_json::json!({"error": "GitHub API rate limit exceeded"})),
@@ -79,7 +108,9 @@ async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
                 .into_response();
         }
         Err(e) => {
-            eprintln!("GitHub API error: {e}");
+            // Report all other unexpected errors to Sentry
+            sentry::capture_error(&e);
+            tracing::error!("GitHub API error: {e}");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({"error": "Failed to fetch user statistics"})),
@@ -173,7 +204,38 @@ pub struct LangsCardQuery {
     exclude_repo: Option<String>,
 }
 
+#[tracing::instrument(name = "langs_card_request", fields(username = %q.username))]
 async fn get_langs_card(Query(q): Query<LangsCardQuery>) -> impl IntoResponse {
+    // Add user context to Sentry
+    sentry::configure_scope(|scope| {
+        scope.set_user(Some(sentry::User {
+            username: Some(q.username.clone()),
+            ..Default::default()
+        }));
+        scope.set_tag("card_type", "languages");
+        scope.set_context(
+            "request_params",
+            sentry::protocol::Context::Other({
+                let mut map = std::collections::BTreeMap::new();
+                map.insert("username".to_string(), q.username.clone().into());
+                if let Some(theme) = &q.settings.theme {
+                    map.insert("theme".to_string(), format!("{:?}", theme).into());
+                }
+                if let Some(exclude_repo) = &q.exclude_repo {
+                    map.insert("exclude_repo".to_string(), exclude_repo.clone().into());
+                }
+                if let Some(layout) = &q.layout {
+                    map.insert("layout".to_string(), format!("{:?}", layout).into());
+                }
+                map.insert(
+                    "max_languages".to_string(),
+                    q.max_languages.unwrap_or(8).into(),
+                );
+                map
+            }),
+        );
+    });
+
     // Validate username
     if let Err(e) = validate_username(&q.username) {
         return (
@@ -228,6 +290,14 @@ async fn get_langs_card(Query(q): Query<LangsCardQuery>) -> impl IntoResponse {
                 .into_response();
         }
         Err(GitHubApiError::RateLimitExceeded) => {
+            // Report rate limit exceeded to Sentry as it's an operational issue
+            sentry::capture_message(
+                &format!(
+                    "GitHub API rate limit exceeded for user: {} (languages)",
+                    q.username
+                ),
+                sentry::Level::Warning,
+            );
             return (
                 StatusCode::TOO_MANY_REQUESTS,
                 Json(serde_json::json!({"error": "GitHub API rate limit exceeded"})),
@@ -235,7 +305,9 @@ async fn get_langs_card(Query(q): Query<LangsCardQuery>) -> impl IntoResponse {
                 .into_response();
         }
         Err(e) => {
-            eprintln!("GitHub API error: {e}");
+            // Report all other unexpected errors to Sentry
+            sentry::capture_error(&e);
+            tracing::error!("GitHub API error: {e}");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({"error": "Failed to fetch user languages"})),
