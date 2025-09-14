@@ -79,7 +79,7 @@ async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
                 .into_response();
         }
         Err(e) => {
-            eprintln!("GitHub API error: {}", e);
+            eprintln!("GitHub API error: {e}");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({"error": "Failed to fetch user statistics"})),
@@ -235,7 +235,7 @@ async fn get_langs_card(Query(q): Query<LangsCardQuery>) -> impl IntoResponse {
                 .into_response();
         }
         Err(e) => {
-            eprintln!("GitHub API error: {}", e);
+            eprintln!("GitHub API error: {e}");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({"error": "Failed to fetch user languages"})),

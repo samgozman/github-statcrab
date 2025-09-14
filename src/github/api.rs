@@ -180,7 +180,7 @@ impl GitHubApi {
         let response = self
             .client
             .post("https://api.github.com/graphql")
-            .header("Authorization", format!("Bearer {}", token))
+            .header("Authorization", format!("Bearer {token}"))
             .header("User-Agent", "github-statcrab")
             .json(&payload)
             .send()

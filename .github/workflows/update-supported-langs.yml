@@ -19,7 +19,7 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.88.0
+          toolchain: 1.89.0
 
       - name: Generate language colors JSON
         run: make gen-language-colors
