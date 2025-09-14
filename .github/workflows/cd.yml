@@ -33,6 +33,6 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu')
       - uses: taiki-e/upload-rust-binary-action@v1
         with:
-          bin: github-statcrab
+          bin: server
           target: ${{ matrix.target }}
           token: ${{ secrets.GITHUB_TOKEN }}
