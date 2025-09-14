@@ -1,6 +1,12 @@
 # github-statcrab
 
-## Setup
+`github-statcrab` is a Rust-based web server that generates dynamic SVG cards displaying GitHub user statistics and programming language usage. It leverages the GitHub API to fetch user data and presents it in a visually appealing format to be embedded in README files or web pages.
+
+## Usage Guide
+
+This guide will help you set up and run the `github-statcrab` server, as well as how to use its API endpoints.
+
+### For Developers
 
 1. Copy the example environment file:
 
@@ -19,17 +25,28 @@
    - Go to GitHub Settings > Developer settings > Personal access tokens
    - Generate a new token with `public_repo` and `read:user` scopes
 
-## Running the Server
+#### Running From Docker Latest Image
+
+You can run the server using Docker. Make sure to replace `your_github_personal_access_token_here` with your actual GitHub Personal Access Token.
+
+```bash
+docker pull ghcr.io/samgozman/github-statcrab/server:latest  
+docker run -p 3000:3000 --env-file .env ghcr.io/samgozman/github-statcrab/server:latest
+```
+
+#### Build & Run Server Locally
+
+To run the server locally, ensure you have Rust and Cargo installed. You can install them from [rustup.rs](https://rustup.rs/).
 
 The server automatically loads environment variables from the `.env` file:
 
 ```bash
-cargo run
+make run
 ```
 
 The server will start on `http://0.0.0.0:3000` and will automatically read your GitHub token from the `.env` file.
 
-### API Endpoints
+##### API Endpoints
 
 Once the server is running, you can access the following endpoints:
 
@@ -43,15 +60,9 @@ Once the server is running, you can access the following endpoints:
 
 Both endpoints return SVG images that can be embedded in README files or web pages.
 
-## Testing
+##### Testing
 
 Run the tests with:
-
-```bash
-cargo test
-```
-
-or to run a specific test:
 
 ```bash
 make test
