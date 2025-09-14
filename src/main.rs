@@ -2,23 +2,32 @@ mod cards;
 mod github;
 mod web;
 
-use axum::serve;
+use anyhow::Result;
 use std::net::SocketAddr;
-use tokio::net::TcpListener;
 
-#[tokio::main]
-async fn main() {
+fn main() -> Result<()> {
     // Load environment variables from .env file if it exists
     dotenvy::dotenv().ok();
 
     let app = web::app_router();
 
-    // Bind address (0.0.0.0 to be accessible in containers; localhost otherwise)
-    let addr: SocketAddr = "0.0.0.0:3000".parse().expect("valid socket address");
-    let listener = TcpListener::bind(addr).await.expect("bind tcp listener");
-    println!("Listening on http://{}", listener.local_addr().unwrap());
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()?
+        .block_on(async {
+            // Bind address (0.0.0.0 to be accessible in containers; localhost otherwise)
+            let addr: SocketAddr = "0.0.0.0:3000".parse().expect("valid socket address");
 
-    if let Err(e) = serve(listener, app).await {
-        eprintln!("server error: {e}");
-    }
+            // Create the TCP listener
+            let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+
+            println!("Listening on http://{}", listener.local_addr().unwrap());
+
+            // Start the server
+            axum::serve(listener, app.into_make_service())
+                .await
+                .unwrap();
+        });
+
+    Ok(())
 }
