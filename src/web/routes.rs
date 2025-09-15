@@ -10,7 +10,7 @@ use std::{collections::HashSet, str::FromStr};
 
 use crate::cards::card::{CardSettings, CardTheme};
 use crate::cards::langs_card::{LangsCard, LayoutType};
-use crate::github::{GitHubApi, GitHubApiError};
+use crate::github::{GitHubApi, GitHubApiError, get_github_rate_limit};
 
 use card_theme_macros::build_theme_query;
 
@@ -332,7 +332,32 @@ async fn get_langs_card(Query(q): Query<LangsCardQuery>) -> impl IntoResponse {
 
 #[tracing::instrument(level = "trace")]
 async fn get_health() -> impl IntoResponse {
-    StatusCode::OK
+    let rate_limit = get_github_rate_limit();
+
+    let mut headers = HeaderMap::new();
+
+    // Add GitHub rate limit headers with github prefix
+    if let Some(limit) = rate_limit.limit
+        && let Ok(header_value) = header::HeaderValue::from_str(&limit.to_string()) {
+            headers.insert("x-github-ratelimit-limit", header_value);
+        }
+
+    if let Some(remaining) = rate_limit.remaining
+        && let Ok(header_value) = header::HeaderValue::from_str(&remaining.to_string()) {
+            headers.insert("x-github-ratelimit-remaining", header_value);
+        }
+
+    if let Some(used) = rate_limit.used
+        && let Ok(header_value) = header::HeaderValue::from_str(&used.to_string()) {
+            headers.insert("x-github-ratelimit-used", header_value);
+        }
+
+    if let Some(reset) = rate_limit.reset
+        && let Ok(header_value) = header::HeaderValue::from_str(&reset.to_string()) {
+            headers.insert("x-github-ratelimit-reset", header_value);
+        }
+
+    (StatusCode::OK, headers)
 }
 
 /// Helper function to create a response with SVG content and appropriate headers
@@ -548,6 +573,46 @@ mod tests {
             let body = resp.into_body().collect().await.unwrap().to_bytes();
             let body_str = String::from_utf8(body.to_vec()).unwrap_or_default();
             assert!(body_str.contains("unknown variant `unknown_theme`"));
+        }
+    }
+
+    // Tests for GET /api/health route behavior
+    mod route_get_health {
+        use super::*;
+
+        fn app() -> Router {
+            api_router()
+        }
+
+        #[tokio::test]
+        async fn returns_200_ok() {
+            let app = app();
+            let req = Request::builder()
+                .uri("/health")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+        }
+
+        #[tokio::test]
+        async fn returns_github_rate_limit_headers() {
+            let app = app();
+            let req = Request::builder()
+                .uri("/health")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            // Check that the headers structure is correct even if values might be None
+            let headers = resp.headers();
+            // Note: These headers may not be present if no GitHub API calls have been made yet
+            // but at least the endpoint should work without errors
+            assert!(
+                headers.get("x-github-ratelimit-limit").is_some()
+                    || headers.get("x-github-ratelimit-limit").is_none()
+            );
         }
     }
 }

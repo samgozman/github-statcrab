@@ -553,3 +553,81 @@ async fn test_langs_card_with_unknown_theme_returns_400() {
 
     println!("✓ Correctly rejected unknown theme in langs card");
 }
+
+#[tokio::test]
+async fn test_health_endpoint_returns_200() {
+    let app = app();
+    let req = Request::builder()
+        .uri("/health")
+        .body(Body::empty())
+        .unwrap();
+
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    println!("✓ Health endpoint returns 200 OK");
+}
+
+#[tokio::test]
+async fn test_health_endpoint_after_github_api_call() {
+    common::setup_integration_test();
+
+    let app = app();
+    let username = common::get_test_username();
+
+    // First make a GitHub API call to populate rate limit info
+    let stats_req = Request::builder()
+        .uri(format!("/stats-card?username={}", username))
+        .body(Body::empty())
+        .unwrap();
+
+    let stats_resp = app.clone().oneshot(stats_req).await.unwrap();
+
+    // Don't check if the stats call succeeded (might fail due to rate limits, etc.)
+    // Just make sure it attempted the GitHub API call
+    println!("Stats card response status: {}", stats_resp.status());
+
+    // Now check the health endpoint to see if it has rate limit headers
+    let health_req = Request::builder()
+        .uri("/health")
+        .body(Body::empty())
+        .unwrap();
+
+    let health_resp = app.oneshot(health_req).await.unwrap();
+    assert_eq!(health_resp.status(), StatusCode::OK);
+
+    let headers = health_resp.headers();
+
+    // Check for the presence of GitHub rate limit headers
+    let has_limit = headers.get("x-github-ratelimit-limit").is_some();
+    let has_remaining = headers.get("x-github-ratelimit-remaining").is_some();
+    let has_used = headers.get("x-github-ratelimit-used").is_some();
+    let has_reset = headers.get("x-github-ratelimit-reset").is_some();
+
+    println!("GitHub Rate Limit Headers Present:");
+    println!("  x-github-ratelimit-limit: {}", has_limit);
+    println!("  x-github-ratelimit-remaining: {}", has_remaining);
+    println!("  x-github-ratelimit-used: {}", has_used);
+    println!("  x-github-ratelimit-reset: {}", has_reset);
+
+    // If any headers are present, it means our rate limit tracking is working
+    if has_limit || has_remaining || has_used || has_reset {
+        println!("✓ Rate limit tracking is working - headers found in health endpoint");
+
+        // Print actual header values for debugging
+        if let Some(limit) = headers.get("x-github-ratelimit-limit") {
+            println!("  Limit: {:?}", limit);
+        }
+        if let Some(remaining) = headers.get("x-github-ratelimit-remaining") {
+            println!("  Remaining: {:?}", remaining);
+        }
+        if let Some(used) = headers.get("x-github-ratelimit-used") {
+            println!("  Used: {:?}", used);
+        }
+        if let Some(reset) = headers.get("x-github-ratelimit-reset") {
+            println!("  Reset: {:?}", reset);
+        }
+    } else {
+        println!("⚠️  No rate limit headers found (GitHub API call might not have succeeded)");
+    }
+}

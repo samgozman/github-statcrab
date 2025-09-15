@@ -1,8 +1,67 @@
 use reqwest::Client;
 use serde_json::json;
 use std::env;
+use std::sync::OnceLock;
+use std::sync::{Arc, RwLock};
 
 use crate::github::types::*;
+
+#[derive(Debug, Clone, Default)]
+pub struct GitHubRateLimit {
+    pub limit: Option<u64>,
+    pub remaining: Option<u64>,
+    pub used: Option<u64>,
+    pub reset: Option<u64>,
+}
+
+// Global rate limit state
+static RATE_LIMIT_STATE: OnceLock<Arc<RwLock<GitHubRateLimit>>> = OnceLock::new();
+
+fn get_rate_limit_state() -> Arc<RwLock<GitHubRateLimit>> {
+    RATE_LIMIT_STATE
+        .get_or_init(|| Arc::new(RwLock::new(GitHubRateLimit::default())))
+        .clone()
+}
+
+/// Get the current GitHub rate limit information
+pub fn get_github_rate_limit() -> GitHubRateLimit {
+    let state = get_rate_limit_state();
+    let guard = state.read().unwrap_or_else(|poisoned| {
+        // If the lock is poisoned, we still want to get the data
+        poisoned.into_inner()
+    });
+    guard.clone()
+}
+
+/// Update the GitHub rate limit information from response headers
+fn update_rate_limit_from_headers(headers: &reqwest::header::HeaderMap) {
+    let state = get_rate_limit_state();
+    let mut guard = state.write().unwrap_or_else(|poisoned| {
+        // If the lock is poisoned, we still want to update the data
+        poisoned.into_inner()
+    });
+
+    // Parse rate limit headers
+    guard.limit = headers
+        .get("x-ratelimit-limit")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.parse().ok());
+
+    guard.remaining = headers
+        .get("x-ratelimit-remaining")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.parse().ok());
+
+    guard.used = headers
+        .get("x-ratelimit-used")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.parse().ok());
+
+    guard.reset = headers
+        .get("x-ratelimit-reset")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.parse().ok());
+}
 
 #[derive(Debug)]
 pub struct GitHubApi {
@@ -211,6 +270,9 @@ impl GitHubApi {
         if response.status() == reqwest::StatusCode::UNAUTHORIZED {
             return Err(GitHubApiError::MissingToken);
         }
+
+        // Update rate limit information from response headers
+        update_rate_limit_from_headers(response.headers());
 
         if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
             // Rate limit info for debugging
