@@ -18,6 +18,7 @@ pub fn api_router() -> Router {
     Router::new()
         .route("/stats-card", get(get_stats_card))
         .route("/langs-card", get(get_langs_card))
+        .route("/health", get(get_health))
 }
 
 #[derive(Debug, Deserialize)]
@@ -327,6 +328,11 @@ async fn get_langs_card(Query(q): Query<LangsCardQuery>) -> impl IntoResponse {
     .render();
 
     svg_response(svg)
+}
+
+#[tracing::instrument(level = "trace")]
+async fn get_health() -> impl IntoResponse {
+    StatusCode::OK
 }
 
 /// Helper function to create a response with SVG content and appropriate headers
