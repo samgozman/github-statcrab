@@ -48,6 +48,10 @@ pub enum GitHubApiError {
     InvalidUsername(String),
     #[error("Rate limit exceeded")]
     RateLimitExceeded,
+    #[error(
+        "Rate limit protection: remaining requests ({0}) below threshold, waiting until reset at {1}"
+    )]
+    RateLimitProtection(u64, u64),
     #[error("Network error: {0}")]
     NetworkError(#[from] reqwest::Error),
     #[error("GraphQL error: {0}")]

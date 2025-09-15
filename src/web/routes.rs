@@ -108,6 +108,29 @@ async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
             )
                 .into_response();
         }
+        Err(GitHubApiError::RateLimitProtection(remaining, reset_time)) => {
+            // Calculate seconds until reset
+            let current_time = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
+            let retry_after = reset_time.saturating_sub(current_time);
+
+            let mut headers = axum::http::HeaderMap::new();
+            if let Ok(retry_header) = axum::http::HeaderValue::from_str(&retry_after.to_string()) {
+                headers.insert("retry-after", retry_header);
+            }
+
+            return (
+                StatusCode::TOO_MANY_REQUESTS,
+                headers,
+                Json(serde_json::json!({
+                    "error": format!("Rate limit protection active: {} requests remaining, reset at {}", remaining, reset_time),
+                    "retry_after_seconds": retry_after
+                })),
+            )
+                .into_response();
+        }
         Err(e) => {
             // Report all other unexpected errors to Sentry
             sentry::capture_error(&e);
@@ -305,6 +328,29 @@ async fn get_langs_card(Query(q): Query<LangsCardQuery>) -> impl IntoResponse {
             )
                 .into_response();
         }
+        Err(GitHubApiError::RateLimitProtection(remaining, reset_time)) => {
+            // Calculate seconds until reset
+            let current_time = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
+            let retry_after = reset_time.saturating_sub(current_time);
+
+            let mut headers = axum::http::HeaderMap::new();
+            if let Ok(retry_header) = axum::http::HeaderValue::from_str(&retry_after.to_string()) {
+                headers.insert("retry-after", retry_header);
+            }
+
+            return (
+                StatusCode::TOO_MANY_REQUESTS,
+                headers,
+                Json(serde_json::json!({
+                    "error": format!("Rate limit protection active: {} requests remaining, reset at {}", remaining, reset_time),
+                    "retry_after_seconds": retry_after
+                })),
+            )
+                .into_response();
+        }
         Err(e) => {
             // Report all other unexpected errors to Sentry
             sentry::capture_error(&e);
@@ -338,24 +384,28 @@ async fn get_health() -> impl IntoResponse {
 
     // Add GitHub rate limit headers with github prefix
     if let Some(limit) = rate_limit.limit
-        && let Ok(header_value) = header::HeaderValue::from_str(&limit.to_string()) {
-            headers.insert("x-github-ratelimit-limit", header_value);
-        }
+        && let Ok(header_value) = header::HeaderValue::from_str(&limit.to_string())
+    {
+        headers.insert("x-github-ratelimit-limit", header_value);
+    }
 
     if let Some(remaining) = rate_limit.remaining
-        && let Ok(header_value) = header::HeaderValue::from_str(&remaining.to_string()) {
-            headers.insert("x-github-ratelimit-remaining", header_value);
-        }
+        && let Ok(header_value) = header::HeaderValue::from_str(&remaining.to_string())
+    {
+        headers.insert("x-github-ratelimit-remaining", header_value);
+    }
 
     if let Some(used) = rate_limit.used
-        && let Ok(header_value) = header::HeaderValue::from_str(&used.to_string()) {
-            headers.insert("x-github-ratelimit-used", header_value);
-        }
+        && let Ok(header_value) = header::HeaderValue::from_str(&used.to_string())
+    {
+        headers.insert("x-github-ratelimit-used", header_value);
+    }
 
     if let Some(reset) = rate_limit.reset
-        && let Ok(header_value) = header::HeaderValue::from_str(&reset.to_string()) {
-            headers.insert("x-github-ratelimit-reset", header_value);
-        }
+        && let Ok(header_value) = header::HeaderValue::from_str(&reset.to_string())
+    {
+        headers.insert("x-github-ratelimit-reset", header_value);
+    }
 
     (StatusCode::OK, headers)
 }

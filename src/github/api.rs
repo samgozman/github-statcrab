@@ -63,6 +63,41 @@ fn update_rate_limit_from_headers(headers: &reqwest::header::HeaderMap) {
         .and_then(|s| s.parse().ok());
 }
 
+/// Check if we should make a GitHub API request based on current rate limits
+fn check_rate_limit_before_request() -> Result<(), GitHubApiError> {
+    let rate_limit = get_github_rate_limit();
+    check_rate_limit_with_data(&rate_limit)
+}
+
+/// Check if we should make a GitHub API request based on provided rate limit data
+fn check_rate_limit_with_data(rate_limit: &GitHubRateLimit) -> Result<(), GitHubApiError> {
+    // If we don't have rate limit info yet, allow the request
+    if rate_limit.remaining.is_none() || rate_limit.reset.is_none() {
+        return Ok(());
+    }
+
+    let remaining = rate_limit.remaining.unwrap();
+    let reset_time = rate_limit.reset.unwrap();
+
+    // Check if remaining requests are below threshold
+    if remaining < 100 {
+        // Check if we're still within the rate limit window
+        let current_time = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+
+        if current_time < reset_time {
+            return Err(GitHubApiError::RateLimitProtection(remaining, reset_time));
+        }
+
+        // If the reset time has passed, allow the request
+        // (the rate limit will be updated after the request)
+    }
+
+    Ok(())
+}
+
 #[derive(Debug)]
 pub struct GitHubApi {
     client: Client,
@@ -229,6 +264,9 @@ impl GitHubApi {
         T: serde::de::DeserializeOwned,
     {
         let token = self.token.as_ref().ok_or(GitHubApiError::MissingToken)?;
+
+        // Check rate limit before making the request
+        check_rate_limit_before_request()?;
 
         let payload = json!({
             "query": query,
@@ -461,5 +499,167 @@ impl GitHubApi {
         let stats = crate::cards::langs_card::LanguageStat::from_edges(edges);
 
         Ok(stats)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_rate_limit_check_with_no_data() {
+        let rate_limit = GitHubRateLimit::default();
+        let result = check_rate_limit_with_data(&rate_limit);
+        assert!(
+            result.is_ok(),
+            "Should allow request when no rate limit data available"
+        );
+    }
+
+    #[test]
+    fn test_rate_limit_check_with_sufficient_remaining() {
+        let rate_limit = GitHubRateLimit {
+            limit: Some(5000),
+            remaining: Some(500),
+            used: Some(4500),
+            reset: Some(
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+                    + 3600, // 1 hour from now
+            ),
+        };
+
+        let result = check_rate_limit_with_data(&rate_limit);
+        assert!(
+            result.is_ok(),
+            "Should allow request when sufficient requests remaining"
+        );
+    }
+
+    #[test]
+    fn test_rate_limit_protection_triggered() {
+        let reset_time = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            + 3600; // 1 hour from now
+
+        let rate_limit = GitHubRateLimit {
+            limit: Some(5000),
+            remaining: Some(50), // Below threshold
+            used: Some(4950),
+            reset: Some(reset_time),
+        };
+
+        let result = check_rate_limit_with_data(&rate_limit);
+        assert!(
+            result.is_err(),
+            "Should block request when remaining requests below threshold"
+        );
+
+        if let Err(GitHubApiError::RateLimitProtection(remaining, reset)) = result {
+            assert_eq!(remaining, 50);
+            assert_eq!(reset, reset_time);
+        } else {
+            panic!("Expected RateLimitProtection error");
+        }
+    }
+
+    #[test]
+    fn test_rate_limit_allows_after_reset_time() {
+        let past_reset_time = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            - 3600; // 1 hour ago
+
+        let rate_limit = GitHubRateLimit {
+            limit: Some(5000),
+            remaining: Some(50), // Below threshold
+            used: Some(4950),
+            reset: Some(past_reset_time),
+        };
+
+        let result = check_rate_limit_with_data(&rate_limit);
+        assert!(
+            result.is_ok(),
+            "Should allow request when reset time has passed even with low remaining count"
+        );
+    }
+
+    #[test]
+    fn test_rate_limit_with_partial_data() {
+        // Test with only remaining but no reset time
+        let rate_limit = GitHubRateLimit {
+            limit: Some(5000),
+            remaining: Some(50),
+            used: Some(4950),
+            reset: None, // No reset time
+        };
+
+        let result = check_rate_limit_with_data(&rate_limit);
+        assert!(
+            result.is_ok(),
+            "Should allow request when reset time is not available"
+        );
+
+        // Test with only reset time but no remaining
+        let rate_limit = GitHubRateLimit {
+            limit: Some(5000),
+            remaining: None, // No remaining count
+            used: Some(4950),
+            reset: Some(
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+                    + 3600,
+            ),
+        };
+
+        let result = check_rate_limit_with_data(&rate_limit);
+        assert!(
+            result.is_ok(),
+            "Should allow request when remaining count is not available"
+        );
+    }
+
+    #[test]
+    fn test_rate_limit_boundary_conditions() {
+        let future_reset_time = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            + 3600; // 1 hour from now
+
+        // Test exactly at threshold (100)
+        let rate_limit = GitHubRateLimit {
+            limit: Some(5000),
+            remaining: Some(100), // Exactly at threshold
+            used: Some(4900),
+            reset: Some(future_reset_time),
+        };
+
+        let result = check_rate_limit_with_data(&rate_limit);
+        assert!(
+            result.is_ok(),
+            "Should allow request when remaining is exactly at threshold"
+        );
+
+        // Test just below threshold (99)
+        let rate_limit = GitHubRateLimit {
+            limit: Some(5000),
+            remaining: Some(99), // Below threshold
+            used: Some(4901),
+            reset: Some(future_reset_time),
+        };
+
+        let result = check_rate_limit_with_data(&rate_limit);
+        assert!(
+            result.is_err(),
+            "Should block request when remaining is below threshold"
+        );
     }
 }
