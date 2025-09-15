@@ -83,9 +83,6 @@ impl GitHubApi {
                 closedIssues: issues(states: CLOSED) {
                     totalCount
                 }
-                followers {
-                    totalCount
-                }
                 repositoryDiscussions {
                     totalCount
                 }
@@ -328,7 +325,6 @@ impl GitHubApi {
             total_discussions_answered: user
                 .repository_discussion_comments
                 .map_or(0, |rdc| rdc.total_count),
-            followers: user.followers.total_count,
         };
 
         Ok(stats)

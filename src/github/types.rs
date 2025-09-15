@@ -13,7 +13,6 @@ pub struct GitHubStats {
     pub total_issues: u32,
     pub total_discussions_started: u32,
     pub total_discussions_answered: u32,
-    pub followers: u32,
 }
 
 impl GitHubStats {
@@ -96,7 +95,6 @@ pub struct UserData {
     pub open_issues: CountableConnection,
     #[serde(rename = "closedIssues")]
     pub closed_issues: CountableConnection,
-    pub followers: CountableConnection,
     #[serde(rename = "repositoryDiscussions")]
     pub repository_discussions: Option<CountableConnection>,
     #[serde(rename = "repositoryDiscussionComments")]
