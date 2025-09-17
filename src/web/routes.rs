@@ -10,7 +10,7 @@ use std::{collections::HashSet, str::FromStr};
 
 use crate::cards::card::{CardSettings, CardTheme};
 use crate::cards::langs_card::{LangsCard, LayoutType};
-use crate::github::{GitHubApi, GitHubApiError, get_github_rate_limit};
+use crate::github::{GitHubApi, GitHubApiError, get_github_cache, get_github_rate_limit};
 
 use card_theme_macros::build_theme_query;
 
@@ -405,6 +405,43 @@ async fn get_health() -> impl IntoResponse {
         && let Ok(header_value) = header::HeaderValue::from_str(&reset.to_string())
     {
         headers.insert("x-github-ratelimit-reset", header_value);
+    }
+
+    // Add cache statistics headers
+    let cache = get_github_cache();
+    let cache_stats = cache.stats();
+
+    if let Ok(header_value) = header::HeaderValue::from_str(&cache_stats.entry_count.to_string()) {
+        headers.insert("x-cache-total-entries", header_value);
+    }
+
+    if let Ok(header_value) = header::HeaderValue::from_str(&cache_stats.weighted_size.to_string())
+    {
+        headers.insert("x-cache-total-size-bytes", header_value);
+    }
+
+    if let Ok(header_value) =
+        header::HeaderValue::from_str(&cache_stats.stats_cache_entries.to_string())
+    {
+        headers.insert("x-cache-stats-entries", header_value);
+    }
+
+    if let Ok(header_value) =
+        header::HeaderValue::from_str(&cache_stats.stats_cache_size.to_string())
+    {
+        headers.insert("x-cache-stats-size-bytes", header_value);
+    }
+
+    if let Ok(header_value) =
+        header::HeaderValue::from_str(&cache_stats.languages_cache_entries.to_string())
+    {
+        headers.insert("x-cache-languages-entries", header_value);
+    }
+
+    if let Ok(header_value) =
+        header::HeaderValue::from_str(&cache_stats.languages_cache_size.to_string())
+    {
+        headers.insert("x-cache-languages-size-bytes", header_value);
     }
 
     (StatusCode::OK, headers)

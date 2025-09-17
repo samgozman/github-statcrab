@@ -15,7 +15,7 @@ pub struct LangEdge {
 }
 
 /// Represents a single language statistic for the [LangsCard].
-#[derive(Clone)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct LanguageStat {
     /// The name of the programming language.
     /// Should correspond to the name in the `assets/configs/language-colors.json` file.

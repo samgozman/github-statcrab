@@ -21,6 +21,11 @@ This guide will help you set up and run the `github-statcrab` server, as well as
    TEST_GITHUB_USERNAME=your_github_username
    ```
 
+3. Get a GitHub Personal Access Token:
+   - Go to GitHub Settings > Developer settings > Personal access tokens
+   - Generate a new token with `public_repo` and `read:user` scopes
+
+4. *(optional)* Set up Sentry for error tracking:
    You can also set optional Sentry configuration for error tracking.
 
    ```env
@@ -28,9 +33,17 @@ This guide will help you set up and run the `github-statcrab` server, as well as
    SENTRY_ENVIRONMENT=development
    ```
 
-3. Get a GitHub Personal Access Token:
-   - Go to GitHub Settings > Developer settings > Personal access tokens
-   - Generate a new token with `public_repo` and `read:user` scopes
+5. *(optional)* Configure cache sizes:
+   You can adjust the cache sizes for user stats and language stats in the `.env` file.
+
+   ```env
+   # Maximum memory capacity for GitHub API response cache in MiB (default: 32)
+   CACHE_MAX_CAPACITY_MB=32
+   # TTL for user stats cache in seconds (default: 900 = 15 minutes)
+   CACHE_USER_STATS_TTL_SECONDS=900
+   # TTL for user languages cache in seconds (default: 3600 = 1 hour)  
+   CACHE_USER_LANGUAGES_TTL_SECONDS=3600
+   ```
 
 #### Running From Docker Latest Image
 

@@ -4,6 +4,7 @@ use std::env;
 use std::sync::OnceLock;
 use std::sync::{Arc, RwLock};
 
+use crate::github::cache::get_github_cache;
 use crate::github::types::*;
 
 #[derive(Debug, Clone, Default)]
@@ -349,6 +350,25 @@ impl GitHubApi {
     pub async fn fetch_user_stats(&self, username: &str) -> Result<GitHubStats, GitHubApiError> {
         Self::validate_username(username)?;
 
+        let cache = get_github_cache();
+        let username_owned = username.to_string();
+        let api_ref = self;
+
+        cache
+            .get_or_insert_user_stats(username_owned.clone(), || async move {
+                api_ref.fetch_user_stats_uncached(&username_owned).await
+            })
+            .await
+    }
+
+    /// Fetch user statistics from GitHub without caching
+    #[tracing::instrument(name = "fetch_user_stats_uncached", fields(username = %username))]
+    async fn fetch_user_stats_uncached(
+        &self,
+        username: &str,
+    ) -> Result<GitHubStats, GitHubApiError> {
+        Self::validate_username(username)?;
+
         // Initial query to get basic stats and first page of repositories
         let variables = json!({
             "login": username,
@@ -439,6 +459,30 @@ impl GitHubApi {
     ) -> Result<Vec<crate::cards::langs_card::LanguageStat>, GitHubApiError> {
         Self::validate_username(username)?;
 
+        let cache = get_github_cache();
+        let username_owned = username.to_string();
+        let exclude_repos_owned = exclude_repos.to_vec();
+        let api_ref = self;
+
+        cache
+            .get_or_insert_user_languages(username_owned.clone(), &exclude_repos_owned, || {
+                let exclude_repos_cloned = exclude_repos_owned.clone();
+                async move {
+                    api_ref
+                        .fetch_user_languages_uncached(&username_owned, &exclude_repos_cloned)
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// Fetch user languages from GitHub without caching
+    #[tracing::instrument(name = "fetch_user_languages_uncached", fields(username = %username, excluded_repos = exclude_repos.len()))]
+    async fn fetch_user_languages_uncached(
+        &self,
+        username: &str,
+        exclude_repos: &[String],
+    ) -> Result<Vec<crate::cards::langs_card::LanguageStat>, GitHubApiError> {
         let mut all_repos = Vec::new();
         let mut after_cursor: Option<String> = None;
         let mut has_next_page = true;
