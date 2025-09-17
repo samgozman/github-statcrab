@@ -565,22 +565,36 @@ async fn test_health_endpoint_returns_200() {
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 
-    // Check for app version header (should always be present)
-    let headers = resp.headers();
-    let version = headers
-        .get("x-app-version")
+    // Check for JSON content type
+    let content_type = resp
+        .headers()
+        .get("content-type")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
-    assert!(
-        !version.is_empty(),
-        "x-app-version header should be present"
-    );
+    assert!(content_type.contains("application/json"));
+
+    // Parse JSON response
+    let body = resp.into_body().collect().await.unwrap().to_bytes();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+    // Check status field
+    assert_eq!(json.get("status").and_then(|v| v.as_str()), Some("OK"));
+
+    // Check app version field
+    let version = json
+        .get("app_version")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    assert!(!version.is_empty(), "app_version should be present");
     assert!(
         version.chars().any(|c| c.is_ascii_digit()),
         "Version should contain digits"
     );
 
-    println!("✓ Health endpoint returns 200 OK with version: {}", version);
+    println!(
+        "✓ Health endpoint returns 200 OK with JSON response, version: {}",
+        version
+    );
 }
 
 #[tokio::test]
@@ -611,106 +625,115 @@ async fn test_health_endpoint_after_github_api_call() {
     let health_resp = app.oneshot(health_req).await.unwrap();
     assert_eq!(health_resp.status(), StatusCode::OK);
 
-    let headers = health_resp.headers();
-
-    // Check for app version header (should always be present)
-    let version = headers
-        .get("x-app-version")
+    // Check for JSON content type
+    let content_type = health_resp
+        .headers()
+        .get("content-type")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
-    assert!(
-        !version.is_empty(),
-        "x-app-version header should be present"
-    );
+    assert!(content_type.contains("application/json"));
+
+    // Parse JSON response
+    let body = health_resp.into_body().collect().await.unwrap().to_bytes();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+    // Check status field
+    assert_eq!(json.get("status").and_then(|v| v.as_str()), Some("OK"));
+
+    // Check app version field (should always be present)
+    let version = json
+        .get("app_version")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    assert!(!version.is_empty(), "app_version should be present");
     assert!(
         version.chars().any(|c| c.is_ascii_digit()),
         "Version should contain digits"
     );
-    println!("✓ App version header found: {}", version);
+    println!("✓ App version found: {}", version);
 
-    // Check for cache statistics headers (should always be present)
-    let has_cache_total_entries = headers.get("x-cache-total-entries").is_some();
-    let has_cache_total_size = headers.get("x-cache-total-size-bytes").is_some();
-    let has_cache_stats_entries = headers.get("x-cache-stats-entries").is_some();
-    let has_cache_stats_size = headers.get("x-cache-stats-size-bytes").is_some();
-    let has_cache_languages_entries = headers.get("x-cache-languages-entries").is_some();
-    let has_cache_languages_size = headers.get("x-cache-languages-size-bytes").is_some();
+    // Check cache statistics (should always be present)
+    let cache = json.get("cache").expect("cache object should be present");
 
     assert!(
-        has_cache_total_entries,
-        "x-cache-total-entries header should be present"
+        cache.get("total_entries").is_some(),
+        "total_entries should be present"
     );
     assert!(
-        has_cache_total_size,
-        "x-cache-total-size-bytes header should be present"
+        cache.get("total_size_bytes").is_some(),
+        "total_size_bytes should be present"
     );
     assert!(
-        has_cache_stats_entries,
-        "x-cache-stats-entries header should be present"
+        cache.get("stats_entries").is_some(),
+        "stats_entries should be present"
     );
     assert!(
-        has_cache_stats_size,
-        "x-cache-stats-size-bytes header should be present"
+        cache.get("stats_size_bytes").is_some(),
+        "stats_size_bytes should be present"
     );
     assert!(
-        has_cache_languages_entries,
-        "x-cache-languages-entries header should be present"
+        cache.get("languages_entries").is_some(),
+        "languages_entries should be present"
     );
     assert!(
-        has_cache_languages_size,
-        "x-cache-languages-size-bytes header should be present"
+        cache.get("languages_size_bytes").is_some(),
+        "languages_size_bytes should be present"
     );
 
-    println!("✓ All cache statistics headers present:");
-    if let Some(total_entries) = headers.get("x-cache-total-entries") {
-        println!("  Total entries: {:?}", total_entries);
+    println!("✓ All cache statistics present:");
+    if let Some(total_entries) = cache.get("total_entries") {
+        println!("  Total entries: {}", total_entries);
     }
-    if let Some(total_size) = headers.get("x-cache-total-size-bytes") {
-        println!("  Total size: {:?}", total_size);
+    if let Some(total_size) = cache.get("total_size_bytes") {
+        println!("  Total size: {}", total_size);
     }
-    if let Some(stats_entries) = headers.get("x-cache-stats-entries") {
-        println!("  Stats entries: {:?}", stats_entries);
+    if let Some(stats_entries) = cache.get("stats_entries") {
+        println!("  Stats entries: {}", stats_entries);
     }
-    if let Some(stats_size) = headers.get("x-cache-stats-size-bytes") {
-        println!("  Stats size: {:?}", stats_size);
+    if let Some(stats_size) = cache.get("stats_size_bytes") {
+        println!("  Stats size: {}", stats_size);
     }
-    if let Some(languages_entries) = headers.get("x-cache-languages-entries") {
-        println!("  Languages entries: {:?}", languages_entries);
+    if let Some(languages_entries) = cache.get("languages_entries") {
+        println!("  Languages entries: {}", languages_entries);
     }
-    if let Some(languages_size) = headers.get("x-cache-languages-size-bytes") {
-        println!("  Languages size: {:?}", languages_size);
+    if let Some(languages_size) = cache.get("languages_size_bytes") {
+        println!("  Languages size: {}", languages_size);
     }
 
-    // Check for the presence of GitHub rate limit headers
-    let has_limit = headers.get("x-github-ratelimit-limit").is_some();
-    let has_remaining = headers.get("x-github-ratelimit-remaining").is_some();
-    let has_used = headers.get("x-github-ratelimit-used").is_some();
-    let has_reset = headers.get("x-github-ratelimit-reset").is_some();
+    // Check for GitHub rate limit data
+    let github_ratelimit = json
+        .get("github_ratelimit")
+        .expect("github_ratelimit object should be present");
 
-    println!("GitHub Rate Limit Headers Present:");
-    println!("  x-github-ratelimit-limit: {}", has_limit);
-    println!("  x-github-ratelimit-remaining: {}", has_remaining);
-    println!("  x-github-ratelimit-used: {}", has_used);
-    println!("  x-github-ratelimit-reset: {}", has_reset);
+    let has_limit = github_ratelimit.get("limit").is_some();
+    let has_remaining = github_ratelimit.get("remaining").is_some();
+    let has_used = github_ratelimit.get("used").is_some();
+    let has_reset = github_ratelimit.get("reset").is_some();
 
-    // If any headers are present, it means our rate limit tracking is working
+    println!("GitHub Rate Limit Data Present:");
+    println!("  limit: {}", has_limit);
+    println!("  remaining: {}", has_remaining);
+    println!("  used: {}", has_used);
+    println!("  reset: {}", has_reset);
+
+    // If any data is present, it means our rate limit tracking is working
     if has_limit || has_remaining || has_used || has_reset {
-        println!("✓ Rate limit tracking is working - headers found in health endpoint");
+        println!("✓ Rate limit tracking is working - data found in health endpoint");
 
-        // Print actual header values for debugging
-        if let Some(limit) = headers.get("x-github-ratelimit-limit") {
-            println!("  Limit: {:?}", limit);
+        // Print actual values for debugging
+        if let Some(limit) = github_ratelimit.get("limit") {
+            println!("  Limit: {}", limit);
         }
-        if let Some(remaining) = headers.get("x-github-ratelimit-remaining") {
-            println!("  Remaining: {:?}", remaining);
+        if let Some(remaining) = github_ratelimit.get("remaining") {
+            println!("  Remaining: {}", remaining);
         }
-        if let Some(used) = headers.get("x-github-ratelimit-used") {
-            println!("  Used: {:?}", used);
+        if let Some(used) = github_ratelimit.get("used") {
+            println!("  Used: {}", used);
         }
-        if let Some(reset) = headers.get("x-github-ratelimit-reset") {
-            println!("  Reset: {:?}", reset);
+        if let Some(reset) = github_ratelimit.get("reset") {
+            println!("  Reset: {}", reset);
         }
     } else {
-        println!("⚠️  No rate limit headers found (GitHub API call might not have succeeded)");
+        println!("⚠️  No rate limit data found (GitHub API call might not have succeeded)");
     }
 }

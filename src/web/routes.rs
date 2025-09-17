@@ -379,77 +379,29 @@ async fn get_langs_card(Query(q): Query<LangsCardQuery>) -> impl IntoResponse {
 #[tracing::instrument(level = "trace")]
 async fn get_health() -> impl IntoResponse {
     let rate_limit = get_github_rate_limit();
-
-    let mut headers = HeaderMap::new();
-
-    // Add app version header
-    if let Ok(header_value) = header::HeaderValue::from_str(env!("CARGO_PKG_VERSION")) {
-        headers.insert("x-app-version", header_value);
-    }
-
-    // Add GitHub rate limit headers with github prefix
-    if let Some(limit) = rate_limit.limit
-        && let Ok(header_value) = header::HeaderValue::from_str(&limit.to_string())
-    {
-        headers.insert("x-github-ratelimit-limit", header_value);
-    }
-
-    if let Some(remaining) = rate_limit.remaining
-        && let Ok(header_value) = header::HeaderValue::from_str(&remaining.to_string())
-    {
-        headers.insert("x-github-ratelimit-remaining", header_value);
-    }
-
-    if let Some(used) = rate_limit.used
-        && let Ok(header_value) = header::HeaderValue::from_str(&used.to_string())
-    {
-        headers.insert("x-github-ratelimit-used", header_value);
-    }
-
-    if let Some(reset) = rate_limit.reset
-        && let Ok(header_value) = header::HeaderValue::from_str(&reset.to_string())
-    {
-        headers.insert("x-github-ratelimit-reset", header_value);
-    }
-
-    // Add cache statistics headers
     let cache = get_github_cache();
     let cache_stats = cache.stats();
 
-    if let Ok(header_value) = header::HeaderValue::from_str(&cache_stats.entry_count.to_string()) {
-        headers.insert("x-cache-total-entries", header_value);
-    }
+    let health_data = serde_json::json!({
+        "status": "OK",
+        "app_version": env!("CARGO_PKG_VERSION"),
+        "github_ratelimit": {
+            "limit": rate_limit.limit,
+            "remaining": rate_limit.remaining,
+            "used": rate_limit.used,
+            "reset": rate_limit.reset
+        },
+        "cache": {
+            "total_entries": cache_stats.entry_count,
+            "total_size_bytes": cache_stats.weighted_size,
+            "stats_entries": cache_stats.stats_cache_entries,
+            "stats_size_bytes": cache_stats.stats_cache_size,
+            "languages_entries": cache_stats.languages_cache_entries,
+            "languages_size_bytes": cache_stats.languages_cache_size
+        }
+    });
 
-    if let Ok(header_value) = header::HeaderValue::from_str(&cache_stats.weighted_size.to_string())
-    {
-        headers.insert("x-cache-total-size-bytes", header_value);
-    }
-
-    if let Ok(header_value) =
-        header::HeaderValue::from_str(&cache_stats.stats_cache_entries.to_string())
-    {
-        headers.insert("x-cache-stats-entries", header_value);
-    }
-
-    if let Ok(header_value) =
-        header::HeaderValue::from_str(&cache_stats.stats_cache_size.to_string())
-    {
-        headers.insert("x-cache-stats-size-bytes", header_value);
-    }
-
-    if let Ok(header_value) =
-        header::HeaderValue::from_str(&cache_stats.languages_cache_entries.to_string())
-    {
-        headers.insert("x-cache-languages-entries", header_value);
-    }
-
-    if let Ok(header_value) =
-        header::HeaderValue::from_str(&cache_stats.languages_cache_size.to_string())
-    {
-        headers.insert("x-cache-languages-size-bytes", header_value);
-    }
-
-    (StatusCode::OK, headers)
+    Json(health_data)
 }
 
 /// Helper function to create a response with SVG content and appropriate headers
@@ -688,7 +640,7 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn returns_github_rate_limit_headers() {
+        async fn returns_json_response_with_health_data() {
             let app = app();
             let req = Request::builder()
                 .uri("/health")
@@ -697,41 +649,46 @@ mod tests {
             let resp = app.oneshot(req).await.unwrap();
             assert_eq!(resp.status(), StatusCode::OK);
 
-            // Check that the headers structure is correct even if values might be None
-            let headers = resp.headers();
-            // Note: These headers may not be present if no GitHub API calls have been made yet
-            // but at least the endpoint should work without errors
-            assert!(
-                headers.get("x-github-ratelimit-limit").is_some()
-                    || headers.get("x-github-ratelimit-limit").is_none()
-            );
-        }
-
-        #[tokio::test]
-        async fn returns_app_version_header() {
-            let app = app();
-            let req = Request::builder()
-                .uri("/health")
-                .body(Body::empty())
-                .unwrap();
-            let resp = app.oneshot(req).await.unwrap();
-            assert_eq!(resp.status(), StatusCode::OK);
-
-            // Check that the app version header is present
-            let headers = resp.headers();
-            let version = headers
-                .get("x-app-version")
+            // Check content type
+            let content_type = resp
+                .headers()
+                .get("content-type")
                 .and_then(|v| v.to_str().ok())
                 .unwrap_or("");
-            assert!(
-                !version.is_empty(),
-                "x-app-version header should be present"
-            );
-            // Version should match the format in Cargo.toml (semantic versioning)
+            assert!(content_type.contains("application/json"));
+
+            // Parse JSON response
+            let body = resp.into_body().collect().await.unwrap().to_bytes();
+            let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+            // Check status field
+            assert_eq!(json.get("status").and_then(|v| v.as_str()), Some("OK"));
+
+            // Check app version field
+            let version = json
+                .get("app_version")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            assert!(!version.is_empty(), "app_version should be present");
             assert!(
                 version.chars().any(|c| c.is_ascii_digit()),
                 "Version should contain digits"
             );
+
+            // Check github_ratelimit object exists
+            assert!(
+                json.get("github_ratelimit").is_some(),
+                "github_ratelimit should be present"
+            );
+
+            // Check cache object exists
+            let cache = json.get("cache").expect("cache should be present");
+            assert!(cache.get("total_entries").is_some());
+            assert!(cache.get("total_size_bytes").is_some());
+            assert!(cache.get("stats_entries").is_some());
+            assert!(cache.get("stats_size_bytes").is_some());
+            assert!(cache.get("languages_entries").is_some());
+            assert!(cache.get("languages_size_bytes").is_some());
         }
     }
 }
