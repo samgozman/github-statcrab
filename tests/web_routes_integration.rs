@@ -565,7 +565,22 @@ async fn test_health_endpoint_returns_200() {
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 
-    println!("✓ Health endpoint returns 200 OK");
+    // Check for app version header (should always be present)
+    let headers = resp.headers();
+    let version = headers
+        .get("x-app-version")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    assert!(
+        !version.is_empty(),
+        "x-app-version header should be present"
+    );
+    assert!(
+        version.chars().any(|c| c.is_ascii_digit()),
+        "Version should contain digits"
+    );
+
+    println!("✓ Health endpoint returns 200 OK with version: {}", version);
 }
 
 #[tokio::test]
@@ -597,6 +612,74 @@ async fn test_health_endpoint_after_github_api_call() {
     assert_eq!(health_resp.status(), StatusCode::OK);
 
     let headers = health_resp.headers();
+
+    // Check for app version header (should always be present)
+    let version = headers
+        .get("x-app-version")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    assert!(
+        !version.is_empty(),
+        "x-app-version header should be present"
+    );
+    assert!(
+        version.chars().any(|c| c.is_ascii_digit()),
+        "Version should contain digits"
+    );
+    println!("✓ App version header found: {}", version);
+
+    // Check for cache statistics headers (should always be present)
+    let has_cache_total_entries = headers.get("x-cache-total-entries").is_some();
+    let has_cache_total_size = headers.get("x-cache-total-size-bytes").is_some();
+    let has_cache_stats_entries = headers.get("x-cache-stats-entries").is_some();
+    let has_cache_stats_size = headers.get("x-cache-stats-size-bytes").is_some();
+    let has_cache_languages_entries = headers.get("x-cache-languages-entries").is_some();
+    let has_cache_languages_size = headers.get("x-cache-languages-size-bytes").is_some();
+
+    assert!(
+        has_cache_total_entries,
+        "x-cache-total-entries header should be present"
+    );
+    assert!(
+        has_cache_total_size,
+        "x-cache-total-size-bytes header should be present"
+    );
+    assert!(
+        has_cache_stats_entries,
+        "x-cache-stats-entries header should be present"
+    );
+    assert!(
+        has_cache_stats_size,
+        "x-cache-stats-size-bytes header should be present"
+    );
+    assert!(
+        has_cache_languages_entries,
+        "x-cache-languages-entries header should be present"
+    );
+    assert!(
+        has_cache_languages_size,
+        "x-cache-languages-size-bytes header should be present"
+    );
+
+    println!("✓ All cache statistics headers present:");
+    if let Some(total_entries) = headers.get("x-cache-total-entries") {
+        println!("  Total entries: {:?}", total_entries);
+    }
+    if let Some(total_size) = headers.get("x-cache-total-size-bytes") {
+        println!("  Total size: {:?}", total_size);
+    }
+    if let Some(stats_entries) = headers.get("x-cache-stats-entries") {
+        println!("  Stats entries: {:?}", stats_entries);
+    }
+    if let Some(stats_size) = headers.get("x-cache-stats-size-bytes") {
+        println!("  Stats size: {:?}", stats_size);
+    }
+    if let Some(languages_entries) = headers.get("x-cache-languages-entries") {
+        println!("  Languages entries: {:?}", languages_entries);
+    }
+    if let Some(languages_size) = headers.get("x-cache-languages-size-bytes") {
+        println!("  Languages size: {:?}", languages_size);
+    }
 
     // Check for the presence of GitHub rate limit headers
     let has_limit = headers.get("x-github-ratelimit-limit").is_some();
