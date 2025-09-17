@@ -382,6 +382,11 @@ async fn get_health() -> impl IntoResponse {
 
     let mut headers = HeaderMap::new();
 
+    // Add app version header
+    if let Ok(header_value) = header::HeaderValue::from_str(env!("CARGO_PKG_VERSION")) {
+        headers.insert("x-app-version", header_value);
+    }
+
     // Add GitHub rate limit headers with github prefix
     if let Some(limit) = rate_limit.limit
         && let Ok(header_value) = header::HeaderValue::from_str(&limit.to_string())
@@ -699,6 +704,33 @@ mod tests {
             assert!(
                 headers.get("x-github-ratelimit-limit").is_some()
                     || headers.get("x-github-ratelimit-limit").is_none()
+            );
+        }
+
+        #[tokio::test]
+        async fn returns_app_version_header() {
+            let app = app();
+            let req = Request::builder()
+                .uri("/health")
+                .body(Body::empty())
+                .unwrap();
+            let resp = app.oneshot(req).await.unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+
+            // Check that the app version header is present
+            let headers = resp.headers();
+            let version = headers
+                .get("x-app-version")
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("");
+            assert!(
+                !version.is_empty(),
+                "x-app-version header should be present"
+            );
+            // Version should match the format in Cargo.toml (semantic versioning)
+            assert!(
+                version.chars().any(|c| c.is_ascii_digit()),
+                "Version should contain digits"
             );
         }
     }
