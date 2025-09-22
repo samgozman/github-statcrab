@@ -41,7 +41,7 @@ fn to_pascal_case(s: &str) -> String {
 fn parse_card_theme_from_filename(filename_stem: &str) -> Option<CardTheme> {
     // Convert filename to PascalCase using the same logic as the macro
     let pascal_case = to_pascal_case(filename_stem);
-    
+
     // Use the macro-generated parser function (completely dynamic!)
     parse_theme_from_pascal_case(&pascal_case)
 }
