@@ -1,0 +1,24 @@
+/**
+ * Dark theme.
+ */
+
+.title {
+  fill: #58a6ff;
+}
+
+.label, .value {
+  fill: #f0f6fc;
+}
+
+.icon {
+  fill: #58a6ff;
+}
+
+.background {
+  fill: #0d1117;
+  stroke: #30363d;
+}
+
+.progressBarBackground {
+  fill: #21262d;
+}

@@ -1,0 +1,24 @@
+/**
+ * Light theme.
+ */
+
+.title {
+  fill: #1f2937;
+}
+
+.label, .value {
+  fill: #374151;
+}
+
+.icon {
+  fill: #1f2937;
+}
+
+.background {
+  fill: #ffffff;
+  stroke: #e5e7eb;
+}
+
+.progressBarBackground {
+  fill: #f3f4f6;
+}
