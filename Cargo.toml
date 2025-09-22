@@ -38,6 +38,7 @@ tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
 tower = "0.5.1"
 moka = { version = "0.12.10", features = ["future"] }
+tempfile = { version = "3.14.0", optional = true }
 
 [dev-dependencies]
 quick-xml = "0.38.3"
@@ -57,9 +58,16 @@ name = "generate_language_colors"
 path = "src/bin/generate_language_colors.rs"
 required-features = ["gen-language-colors"]
 
+# `generate_themes_readme` hidden by feature flag to avoid unnecessary dependencies in the main binary.
+[[bin]]
+name = "generate_themes_readme"
+path = "src/bin/generate_themes_readme.rs"
+required-features = ["gen-themes-readme"]
+
 [features]
 default = []
 gen-language-colors = ["reqwest/blocking", "dep:serde_yaml"]
+gen-themes-readme = ["dep:tempfile"]
 
 # ---------------------------------------------------------------------------
 # Tooling metadata (not used by Cargo directly). This documents external dev

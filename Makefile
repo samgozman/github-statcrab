@@ -22,6 +22,10 @@ test:
 gen-language-colors:
 	cargo run --bin generate_language_colors --features gen-language-colors
 
+# Generate theme examples README from available themes
+gen-themes-readme:
+	cargo run --bin generate_themes_readme --features gen-themes-readme
+
 # Run the server binary
 run:
 	cargo run --bin server -q
