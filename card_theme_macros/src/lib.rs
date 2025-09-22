@@ -85,6 +85,35 @@ pub fn build_theme_query(_input: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
+/// Builds a theme parser function that can convert from filename to CardTheme dynamically.
+#[proc_macro]
+pub fn build_theme_parser(_input: TokenStream) -> TokenStream {
+    let metas = collect_themes();
+    if metas.is_empty() {
+        panic!("No .css themes found in assets/css/themes");
+    }
+
+    // Generate match arms for parsing theme names to CardTheme variants
+    let arms = metas.iter().map(|m| {
+        let variant_ident = &m.variant_ident;
+        let pascal_name = variant_ident.to_string();
+        quote! { #pascal_name => Some(CardTheme::#variant_ident) }
+    });
+
+    let expanded = quote! {
+        /// Dynamically parses a CardTheme variant from a PascalCase theme name.
+        /// Generated automatically from available CSS theme files.
+        fn parse_theme_from_pascal_case(pascal_case: &str) -> Option<CardTheme> {
+            match pascal_case {
+                #( #arms, )*
+                _ => None,
+            }
+        }
+    };
+
+    TokenStream::from(expanded)
+}
+
 /// Converts a kebab-case or snake_case string to PascalCase.
 fn to_pascal_case(s: &str) -> String {
     let mut out = String::new();

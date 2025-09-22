@@ -1,0 +1,25 @@
+/**
+ * Dracula theme.
+ * Based on the popular Dracula color scheme.
+ */
+
+.title {
+  fill: #ff79c6;
+}
+
+.label, .value {
+  fill: #f8f8f2;
+}
+
+.icon {
+  fill: #50fa7b;
+}
+
+.background {
+  fill: #282a36;
+  stroke: #44475a;
+}
+
+.progressBarBackground {
+  fill: #44475a;
+}

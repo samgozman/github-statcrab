@@ -6,6 +6,9 @@ on:
 
 name: CI
 
+env:
+  RUST_TOOLCHAIN: 1.89.0
+
 jobs:
   fmt:
     runs-on: ubuntu-latest
@@ -14,7 +17,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.89.0
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
           components: rustfmt
 
       - name: Run rustfmt
@@ -33,7 +36,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-          toolchain: 1.89.0
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
       - name: Run clippy
         run: make clippy-check
         timeout-minutes: 10
@@ -53,7 +56,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.89.0
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
 
       - name: Run tests
         run: make test
@@ -71,3 +74,41 @@ jobs:
           "$(jq -r 'all(.result as $result | (["success", "skipped"] | contains([$result])))' <<< "${needs}")"
         env:
           needs: ${{ toJson(needs) }}
+
+  update-themes-readme:
+    needs: [conclusion]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+
+      - name: Generate themes README
+        run: make gen-themes-readme
+
+      - name: Check for changes
+        id: verify-changed-files
+        run: |
+          if git diff --quiet assets/css/themes/README.md assets/css/themes/examples/; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push changes
+        if: steps.verify-changed-files.outputs.changed == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add assets/css/themes/README.md assets/css/themes/examples/
+          git commit -m "chore: update themes README and examples"
+          git push origin HEAD:${{ github.head_ref }}
