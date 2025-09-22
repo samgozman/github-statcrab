@@ -45,6 +45,15 @@ This guide will help you set up and run the `github-statcrab` server, as well as
    CACHE_USER_LANGUAGES_TTL_SECONDS=3600
    ```
 
+6. *(optional)* Restrict API access to specific users:
+   You can limit which GitHub usernames are allowed to use the API by setting an allowlist in the `.env` file.
+
+   ```env
+   # Comma-separated list of GitHub usernames allowed to use the API
+   # Leave empty or unset to allow all users (default: empty)
+   ALLOWED_USERNAMES=user1,user2,user3
+   ```
+
 #### Running From Docker Latest Image
 
 You can run the server using Docker. Make sure to replace `your_github_personal_access_token_here` with your actual GitHub Personal Access Token.

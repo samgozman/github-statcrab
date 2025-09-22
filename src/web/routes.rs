@@ -66,6 +66,15 @@ async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
             .into_response();
     }
 
+    // Check if username is allowed to use the API
+    if !is_username_allowed(&q.username) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({"error": "Username not authorized to access this service"})),
+        )
+            .into_response();
+    }
+
     // Build card settings from query (with defaults applied)
     let settings = q.settings.into_settings();
 
@@ -269,6 +278,15 @@ async fn get_langs_card(Query(q): Query<LangsCardQuery>) -> impl IntoResponse {
             .into_response();
     }
 
+    // Check if username is allowed to use the API
+    if !is_username_allowed(&q.username) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({"error": "Username not authorized to access this service"})),
+        )
+            .into_response();
+    }
+
     // Build card settings from query (with defaults applied)
     let settings = q.settings.into_settings();
 
@@ -422,6 +440,23 @@ fn validate_username(username: &str) -> Result<(), String> {
         return Err("Username cannot contain spaces".to_string());
     }
     Ok(())
+}
+
+fn is_username_allowed(username: &str) -> bool {
+    // Get allowed usernames from environment variable
+    let allowed_usernames = std::env::var("ALLOWED_USERNAMES").unwrap_or_default();
+
+    // If empty or not set, allow all users
+    if allowed_usernames.trim().is_empty() {
+        return true;
+    }
+
+    // Check if username is in the allowed list (case-insensitive)
+    allowed_usernames
+        .split(',')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .any(|allowed| allowed.eq_ignore_ascii_case(username))
 }
 
 // Build the ThemeQuery enum from the macro
