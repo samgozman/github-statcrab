@@ -27,30 +27,60 @@ fn main() -> Result<()> {
     // Generate SVG examples for all themes
     let mut stats_examples = BTreeMap::new();
     let mut langs_examples = BTreeMap::new();
+    let mut stats_transparent_examples = BTreeMap::new();
+    let mut langs_transparent_examples = BTreeMap::new();
 
     for (theme_name, theme_variant) in &themes {
-        // Generate Stats Card example
+        // Generate regular Stats Card example
         let stats_svg = generate_stats_card_example(theme_variant.clone())?;
         let stats_file = format!("stats-card-{}.svg", theme_name);
         fs::write(Path::new(EXAMPLES_DIR).join(&stats_file), &stats_svg)
             .context("Failed to write stats card SVG")?;
         stats_examples.insert(theme_name.clone(), stats_file);
 
-        // Generate Langs Card example
+        // Generate regular Langs Card example
         let langs_svg = generate_langs_card_example(theme_variant.clone())?;
         let langs_file = format!("langs-card-{}.svg", theme_name);
         fs::write(Path::new(EXAMPLES_DIR).join(&langs_file), &langs_svg)
             .context("Failed to write langs card SVG")?;
         langs_examples.insert(theme_name.clone(), langs_file);
+
+        // Generate transparent Stats Card example (hide_background & hide_background_stroke)
+        let stats_transparent_svg = generate_stats_card_example_transparent(theme_variant.clone())?;
+        let stats_transparent_file = format!("stats-card-{}-transparent.svg", theme_name);
+        fs::write(
+            Path::new(EXAMPLES_DIR).join(&stats_transparent_file),
+            &stats_transparent_svg,
+        )
+        .context("Failed to write transparent stats card SVG")?;
+        stats_transparent_examples.insert(theme_name.clone(), stats_transparent_file);
+
+        // Generate transparent Langs Card example (hide_background & hide_background_stroke)
+        let langs_transparent_svg = generate_langs_card_example_transparent(theme_variant.clone())?;
+        let langs_transparent_file = format!("langs-card-{}-transparent.svg", theme_name);
+        fs::write(
+            Path::new(EXAMPLES_DIR).join(&langs_transparent_file),
+            &langs_transparent_svg,
+        )
+        .context("Failed to write transparent langs card SVG")?;
+        langs_transparent_examples.insert(theme_name.clone(), langs_transparent_file);
     }
 
     // Generate new README content with fixed intro
-    let new_readme = generate_readme_content(&stats_examples, &langs_examples)?;
+    let new_readme = generate_readme_content(
+        &stats_examples,
+        &langs_examples,
+        &stats_transparent_examples,
+        &langs_transparent_examples,
+    )?;
 
     // Write updated README
     fs::write(README_PATH, new_readme).context("Failed to write updated README.md")?;
 
-    println!("Generated {} theme examples", themes.len());
+    println!(
+        "Generated {} theme examples (regular + transparent)",
+        themes.len() * 2
+    );
     println!("Updated {}", README_PATH);
 
     Ok(())
@@ -175,10 +205,90 @@ fn generate_langs_card_example(theme: CardTheme) -> Result<String> {
     Ok(langs_card.render())
 }
 
+/// Generates a Stats Card example with transparent background (hide_background & hide_background_stroke enabled)
+fn generate_stats_card_example_transparent(theme: CardTheme) -> Result<String> {
+    let settings = CardSettings {
+        offset_x: 12,
+        offset_y: 12,
+        theme,
+        hide_title: false,
+        hide_background: true,
+        hide_background_stroke: true,
+    };
+
+    let stats_card = StatsCard {
+        card_settings: settings,
+        username: "octocat".to_string(),
+        stars_count: Some(1234),
+        commits_ytd_count: Some(567),
+        issues_count: Some(89),
+        pull_requests_count: Some(123),
+        merge_requests_count: Some(45),
+        reviews_count: Some(67),
+        started_discussions_count: Some(12),
+        answered_discussions_count: Some(34),
+    };
+
+    Ok(stats_card.render())
+}
+
+/// Generates a Langs Card example with transparent background (hide_background & hide_background_stroke enabled)
+fn generate_langs_card_example_transparent(theme: CardTheme) -> Result<String> {
+    let settings = CardSettings {
+        offset_x: 12,
+        offset_y: 12,
+        theme,
+        hide_title: false,
+        hide_background: true,
+        hide_background_stroke: true,
+    };
+
+    let dummy_stats = vec![
+        LanguageStat {
+            name: "TypeScript".to_string(),
+            size_bytes: 125000,
+            repo_count: 15,
+        },
+        LanguageStat {
+            name: "JavaScript".to_string(),
+            size_bytes: 98000,
+            repo_count: 12,
+        },
+        LanguageStat {
+            name: "Rust".to_string(),
+            size_bytes: 75000,
+            repo_count: 8,
+        },
+        LanguageStat {
+            name: "Python".to_string(),
+            size_bytes: 45000,
+            repo_count: 6,
+        },
+        LanguageStat {
+            name: "Go".to_string(),
+            size_bytes: 32000,
+            repo_count: 4,
+        },
+    ];
+
+    let langs_card = LangsCard {
+        card_settings: settings,
+        layout: LayoutType::Vertical,
+        stats: dummy_stats,
+        size_weight: Some(1.0),
+        count_weight: Some(0.0),
+        max_languages: Some(5),
+    };
+
+    Ok(langs_card.render())
+}
+
 /// Generates the README content with theme examples
 fn generate_readme_content(
     stats_examples: &BTreeMap<String, String>,
     langs_examples: &BTreeMap<String, String>,
+    stats_transparent_examples: &BTreeMap<String, String>,
+    langs_transparent_examples: &BTreeMap<String, String>,
 ) -> Result<String> {
     let mut content = String::new();
 
@@ -188,16 +298,19 @@ fn generate_readme_content(
     content.push_str("The CSS classes defined in the theme file should follow the naming convention used in the existing themes.\n\n");
     content.push_str("> [!NOTE]  \n");
     content.push_str("> While you can use CSS for styling, keep in mind that you are working with SVG elements. This means that some CSS properties may not work as expected.\n\n");
+    content.push_str("The **Transparent** column shows theme variants with `hide_background=true` and `hide_background_stroke=true` options enabled, removing the card background for integration into custom layouts.\n\n");
 
     // Add Stats Card section
     content.push_str("## Stats Card\n\n");
-    content.push_str("| Theme | Example |\n");
-    content.push_str("|-------|----------|\n");
+    content.push_str("| Theme | Default | Transparent |\n");
+    content.push_str("|-------|---------|-------------|\n");
 
-    for (theme_name, svg_file) in stats_examples {
+    for theme_name in stats_examples.keys() {
+        let default_svg = stats_examples.get(theme_name).unwrap();
+        let transparent_svg = stats_transparent_examples.get(theme_name).unwrap();
         content.push_str(&format!(
-            "| `{}` | ![{}](examples/{}) |\n",
-            theme_name, theme_name, svg_file
+            "| `{}` | ![{}](examples/{}) | ![{} transparent](examples/{}) |\n",
+            theme_name, theme_name, default_svg, theme_name, transparent_svg
         ));
     }
 
@@ -205,13 +318,15 @@ fn generate_readme_content(
 
     // Add Langs Card section
     content.push_str("## Langs Card\n\n");
-    content.push_str("| Theme | Example |\n");
-    content.push_str("|-------|----------|\n");
+    content.push_str("| Theme | Default | Transparent |\n");
+    content.push_str("|-------|---------|-------------|\n");
 
-    for (theme_name, svg_file) in langs_examples {
+    for theme_name in langs_examples.keys() {
+        let default_svg = langs_examples.get(theme_name).unwrap();
+        let transparent_svg = langs_transparent_examples.get(theme_name).unwrap();
         content.push_str(&format!(
-            "| `{}` | ![{}](examples/{}) |\n",
-            theme_name, theme_name, svg_file
+            "| `{}` | ![{}](examples/{}) | ![{} transparent](examples/{}) |\n",
+            theme_name, theme_name, default_svg, theme_name, transparent_svg
         ));
     }
 
@@ -241,8 +356,15 @@ mod tests {
     fn test_generate_readme_content_with_empty_examples() {
         let stats_examples = BTreeMap::new();
         let langs_examples = BTreeMap::new();
+        let stats_transparent_examples = BTreeMap::new();
+        let langs_transparent_examples = BTreeMap::new();
 
-        let result = generate_readme_content(&stats_examples, &langs_examples);
+        let result = generate_readme_content(
+            &stats_examples,
+            &langs_examples,
+            &stats_transparent_examples,
+            &langs_transparent_examples,
+        );
         assert!(result.is_ok());
 
         let content = result.unwrap();
@@ -263,9 +385,29 @@ mod tests {
         stats_examples.insert("a_theme".to_string(), "stats-card-a.svg".to_string());
         stats_examples.insert("m_theme".to_string(), "stats-card-m.svg".to_string());
 
-        let langs_examples = BTreeMap::new();
+        let mut stats_transparent_examples = BTreeMap::new();
+        stats_transparent_examples.insert(
+            "z_theme".to_string(),
+            "stats-card-z-transparent.svg".to_string(),
+        );
+        stats_transparent_examples.insert(
+            "a_theme".to_string(),
+            "stats-card-a-transparent.svg".to_string(),
+        );
+        stats_transparent_examples.insert(
+            "m_theme".to_string(),
+            "stats-card-m-transparent.svg".to_string(),
+        );
 
-        let result = generate_readme_content(&stats_examples, &langs_examples);
+        let langs_examples = BTreeMap::new();
+        let langs_transparent_examples = BTreeMap::new();
+
+        let result = generate_readme_content(
+            &stats_examples,
+            &langs_examples,
+            &stats_transparent_examples,
+            &langs_transparent_examples,
+        );
         assert!(result.is_ok());
 
         let content = result.unwrap();
@@ -360,7 +502,32 @@ mod tests {
         langs_examples.insert("dark".to_string(), "langs-card-dark.svg".to_string());
         langs_examples.insert("light".to_string(), "langs-card-light.svg".to_string());
 
-        let result = generate_readme_content(&stats_examples, &langs_examples);
+        let mut stats_transparent_examples = BTreeMap::new();
+        stats_transparent_examples.insert(
+            "dark".to_string(),
+            "stats-card-dark-transparent.svg".to_string(),
+        );
+        stats_transparent_examples.insert(
+            "light".to_string(),
+            "stats-card-light-transparent.svg".to_string(),
+        );
+
+        let mut langs_transparent_examples = BTreeMap::new();
+        langs_transparent_examples.insert(
+            "dark".to_string(),
+            "langs-card-dark-transparent.svg".to_string(),
+        );
+        langs_transparent_examples.insert(
+            "light".to_string(),
+            "langs-card-light-transparent.svg".to_string(),
+        );
+
+        let result = generate_readme_content(
+            &stats_examples,
+            &langs_examples,
+            &stats_transparent_examples,
+            &langs_transparent_examples,
+        );
         assert!(result.is_ok());
 
         let content = result.unwrap();
@@ -375,12 +542,12 @@ mod tests {
         assert!(content.contains("## Langs Card"));
 
         // Check table headers
-        assert!(content.contains("| Theme | Example |"));
-        assert!(content.contains("|-------|----------|"));
+        assert!(content.contains("| Theme | Default | Transparent |"));
+        assert!(content.contains("|-------|---------|-------------|"));
 
         // Check theme entries
-        assert!(content.contains("| `dark` | ![dark](examples/stats-card-dark.svg) |"));
-        assert!(content.contains("| `light` | ![light](examples/langs-card-light.svg) |"));
+        assert!(content.contains("| `dark` | ![dark](examples/stats-card-dark.svg) | ![dark transparent](examples/stats-card-dark-transparent.svg) |"));
+        assert!(content.contains("| `light` | ![light](examples/langs-card-light.svg) | ![light transparent](examples/langs-card-light-transparent.svg) |"));
     }
 
     #[test]
