@@ -1,0 +1,103 @@
+<svg
+  width="300"
+  height="247"
+  viewBox="0 0 300 247"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  role="img"
+  aria-labelledby="title-id"
+  aria-describedby="description-id"
+>
+  <style>
+  /* 
+    * Card styles for GitHub StatCrab
+    * 
+    * This file contains the styles for the base card component.
+  */
+  
+  .title {
+    font: 800 17px "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  
+  .statsCard > .row > .label, .statsCard > .row > .value {
+    font: 600 15px "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  
+  .langsCard > .row > .label, .langsCard > .row > .value {
+    font: 400 12px "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  
+  /**
+   * Dracula theme.
+   * Based on the popular Dracula color scheme.
+   */
+  
+  .title {
+    fill: #ff79c6;
+  }
+  
+  .label, .value {
+    fill: #f8f8f2;
+  }
+  
+  .icon {
+    fill: #50fa7b;
+  }
+  
+  .background {
+    fill: #282a36;
+    stroke: #44475a;
+  }
+  
+  .progressBarBackground {
+    fill: #44475a;
+  }
+  </style>
+  <title id="title-id">Most used languages</title>
+  <desc id="description-id">GitHub top languages</desc>
+  
+  <g transform="translate(12, 30)"><text x="0" y="0" class="title">Most used languages</text></g>
+  <g class="langsCard" x="0" y="0">
+    <g class="row">
+      <text x="14" y="55" class="label">TypeScript</text>
+      <text x="242" y="71" class="value">33.33%</text>
+      <svg width="220" x="12" y="63">
+          <rect rx="5" ry="5" x="0" y="0" width="220" height="8" class="progressBarBackground"/>
+          <rect rx="5" ry="5" x="0" y="0" width="73" height="8" fill="#3178c6"/>
+      </svg>
+    </g>
+    <g class="row">
+      <text x="14" y="91" class="label">JavaScript</text>
+      <text x="242" y="107" class="value">26.13%</text>
+      <svg width="220" x="12" y="99">
+          <rect rx="5" ry="5" x="0" y="0" width="220" height="8" class="progressBarBackground"/>
+          <rect rx="5" ry="5" x="0" y="0" width="57" height="8" fill="#f1e05a"/>
+      </svg>
+    </g>
+    <g class="row">
+      <text x="14" y="127" class="label">Rust</text>
+      <text x="242" y="143" class="value">20.00%</text>
+      <svg width="220" x="12" y="135">
+          <rect rx="5" ry="5" x="0" y="0" width="220" height="8" class="progressBarBackground"/>
+          <rect rx="5" ry="5" x="0" y="0" width="44" height="8" fill="#dea584"/>
+      </svg>
+    </g>
+    <g class="row">
+      <text x="14" y="163" class="label">Python</text>
+      <text x="242" y="179" class="value">12.00%</text>
+      <svg width="220" x="12" y="171">
+          <rect rx="5" ry="5" x="0" y="0" width="220" height="8" class="progressBarBackground"/>
+          <rect rx="5" ry="5" x="0" y="0" width="26" height="8" fill="#3572A5"/>
+      </svg>
+    </g>
+    <g class="row">
+      <text x="14" y="199" class="label">Go</text>
+      <text x="242" y="215" class="value">8.53%</text>
+      <svg width="220" x="12" y="207">
+          <rect rx="5" ry="5" x="0" y="0" width="220" height="8" class="progressBarBackground"/>
+          <rect rx="5" ry="5" x="0" y="0" width="19" height="8" fill="#00ADD8"/>
+      </svg>
+    </g>
+
+  </g>
+</svg>
