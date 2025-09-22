@@ -9,9 +9,45 @@ use github_statcrab::cards::card::{CardSettings, CardTheme};
 use github_statcrab::cards::langs_card::{LangsCard, LanguageStat, LayoutType};
 use github_statcrab::cards::stats_card::StatsCard;
 
+// Generate the theme parser function dynamically from CSS files
+use card_theme_macros::build_theme_parser;
+build_theme_parser!();
+
 // Output paths
 const README_PATH: &str = "assets/css/themes/README.md";
 const EXAMPLES_DIR: &str = "assets/css/themes/examples";
+
+/// Converts a kebab-case or snake_case string to PascalCase (same logic as the macro).
+fn to_pascal_case(s: &str) -> String {
+    let mut out = String::new();
+    let mut capitalize = true;
+    for ch in s.chars() {
+        if ch == '-' || ch == '_' || ch == ' ' {
+            capitalize = true;
+            continue;
+        }
+        if capitalize {
+            out.extend(ch.to_uppercase());
+            capitalize = false;
+        } else {
+            out.extend(ch.to_lowercase());
+        }
+    }
+    out
+}
+
+/// Dynamically tries to construct a CardTheme from a filename by using macro-generated code.
+/// This leverages the fact that CardTheme variants are generated from CSS files.
+fn parse_card_theme_from_filename(filename_stem: &str) -> Option<CardTheme> {
+    // Convert filename to PascalCase using the same logic as the macro
+    let pascal_case = to_pascal_case(filename_stem);
+    
+    // Use the macro-generated parser function (completely dynamic!)
+    parse_theme_from_pascal_case(&pascal_case)
+}
+
+// Remove the manual implementation - no longer needed!
+// The macro generates this function automatically from CSS files
 
 fn main() -> Result<()> {
     // Create examples directory
@@ -109,14 +145,12 @@ fn discover_themes() -> Result<BTreeMap<String, CardTheme>> {
         // Convert kebab-case filename to snake_case API name
         let api_name = stem.to_ascii_lowercase().replace('-', "_");
 
-        // Convert to CardTheme enum variant based on available themes
-        let theme_variant = match api_name.as_str() {
-            "transparent_blue" => CardTheme::TransparentBlue,
-            "dark" => CardTheme::Dark,
-            "light" => CardTheme::Light,
-            "monokai" => CardTheme::Monokai,
-            _ => {
-                println!("Warning: Unknown theme '{}', skipping", api_name);
+        // Convert to CardTheme enum variant dynamically using the same naming convention as the macro
+        // The macro converts kebab-case filenames to PascalCase enum variants
+        let theme_variant = match parse_card_theme_from_filename(stem) {
+            Some(theme) => theme,
+            None => {
+                println!("Warning: Failed to parse theme '{}', skipping", api_name);
                 continue;
             }
         };
