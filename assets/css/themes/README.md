@@ -19,7 +19,7 @@ The **Transparent** column shows theme variants with `hide_background=true` and 
 | `monokai` | ![monokai](examples/stats-card-monokai.svg) | ![monokai transparent](examples/stats-card-monokai-transparent.svg) |
 | `transparent_blue` | ![transparent_blue](examples/stats-card-transparent_blue.svg) | ![transparent_blue transparent](examples/stats-card-transparent_blue-transparent.svg) |
 
-## Langs Card
+## Langs Card (Vertical)
 
 | Theme | Default | Transparent |
 |-------|---------|-------------|
@@ -28,3 +28,13 @@ The **Transparent** column shows theme variants with `hide_background=true` and 
 | `light` | ![light](examples/langs-card-light.svg) | ![light transparent](examples/langs-card-light-transparent.svg) |
 | `monokai` | ![monokai](examples/langs-card-monokai.svg) | ![monokai transparent](examples/langs-card-monokai-transparent.svg) |
 | `transparent_blue` | ![transparent_blue](examples/langs-card-transparent_blue.svg) | ![transparent_blue transparent](examples/langs-card-transparent_blue-transparent.svg) |
+
+## Langs Card (Horizontal)
+
+| Theme | Default | Transparent |
+|-------|---------|-------------|
+| `dark` | ![dark](examples/langs-card-dark-horizontal.svg) | ![dark transparent](examples/langs-card-dark-horizontal-transparent.svg) |
+| `dracula` | ![dracula](examples/langs-card-dracula-horizontal.svg) | ![dracula transparent](examples/langs-card-dracula-horizontal-transparent.svg) |
+| `light` | ![light](examples/langs-card-light-horizontal.svg) | ![light transparent](examples/langs-card-light-horizontal-transparent.svg) |
+| `monokai` | ![monokai](examples/langs-card-monokai-horizontal.svg) | ![monokai transparent](examples/langs-card-monokai-horizontal-transparent.svg) |
+| `transparent_blue` | ![transparent_blue](examples/langs-card-transparent_blue-horizontal.svg) | ![transparent_blue transparent](examples/langs-card-transparent_blue-horizontal-transparent.svg) |

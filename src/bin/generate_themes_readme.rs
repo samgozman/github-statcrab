@@ -63,8 +63,10 @@ fn main() -> Result<()> {
     // Generate SVG examples for all themes
     let mut stats_examples = BTreeMap::new();
     let mut langs_examples = BTreeMap::new();
+    let mut langs_horizontal_examples = BTreeMap::new();
     let mut stats_transparent_examples = BTreeMap::new();
     let mut langs_transparent_examples = BTreeMap::new();
+    let mut langs_horizontal_transparent_examples = BTreeMap::new();
 
     for (theme_name, theme_variant) in &themes {
         // Generate regular Stats Card example
@@ -74,12 +76,22 @@ fn main() -> Result<()> {
             .context("Failed to write stats card SVG")?;
         stats_examples.insert(theme_name.clone(), stats_file);
 
-        // Generate regular Langs Card example
+        // Generate regular Langs Card example (vertical)
         let langs_svg = generate_langs_card_example(theme_variant.clone())?;
         let langs_file = format!("langs-card-{}.svg", theme_name);
         fs::write(Path::new(EXAMPLES_DIR).join(&langs_file), &langs_svg)
             .context("Failed to write langs card SVG")?;
         langs_examples.insert(theme_name.clone(), langs_file);
+
+        // Generate regular Langs Card example (horizontal)
+        let langs_horizontal_svg = generate_langs_card_horizontal_example(theme_variant.clone())?;
+        let langs_horizontal_file = format!("langs-card-{}-horizontal.svg", theme_name);
+        fs::write(
+            Path::new(EXAMPLES_DIR).join(&langs_horizontal_file),
+            &langs_horizontal_svg,
+        )
+        .context("Failed to write langs card horizontal SVG")?;
+        langs_horizontal_examples.insert(theme_name.clone(), langs_horizontal_file);
 
         // Generate transparent Stats Card example (hide_background & hide_background_stroke)
         let stats_transparent_svg = generate_stats_card_example_transparent(theme_variant.clone())?;
@@ -91,7 +103,7 @@ fn main() -> Result<()> {
         .context("Failed to write transparent stats card SVG")?;
         stats_transparent_examples.insert(theme_name.clone(), stats_transparent_file);
 
-        // Generate transparent Langs Card example (hide_background & hide_background_stroke)
+        // Generate transparent Langs Card example (vertical, hide_background & hide_background_stroke)
         let langs_transparent_svg = generate_langs_card_example_transparent(theme_variant.clone())?;
         let langs_transparent_file = format!("langs-card-{}-transparent.svg", theme_name);
         fs::write(
@@ -100,22 +112,37 @@ fn main() -> Result<()> {
         )
         .context("Failed to write transparent langs card SVG")?;
         langs_transparent_examples.insert(theme_name.clone(), langs_transparent_file);
+
+        // Generate transparent Langs Card example (horizontal, hide_background & hide_background_stroke)
+        let langs_horizontal_transparent_svg =
+            generate_langs_card_horizontal_example_transparent(theme_variant.clone())?;
+        let langs_horizontal_transparent_file =
+            format!("langs-card-{}-horizontal-transparent.svg", theme_name);
+        fs::write(
+            Path::new(EXAMPLES_DIR).join(&langs_horizontal_transparent_file),
+            &langs_horizontal_transparent_svg,
+        )
+        .context("Failed to write transparent langs card horizontal SVG")?;
+        langs_horizontal_transparent_examples
+            .insert(theme_name.clone(), langs_horizontal_transparent_file);
     }
 
     // Generate new README content with fixed intro
     let new_readme = generate_readme_content(
         &stats_examples,
         &langs_examples,
+        &langs_horizontal_examples,
         &stats_transparent_examples,
         &langs_transparent_examples,
+        &langs_horizontal_transparent_examples,
     )?;
 
     // Write updated README
     fs::write(README_PATH, new_readme).context("Failed to write updated README.md")?;
 
     println!(
-        "Generated {} theme examples (regular + transparent)",
-        themes.len() * 2
+        "Generated {} theme examples (stats + langs vertical + langs horizontal, regular + transparent)",
+        themes.len() * 3
     );
     println!("Updated {}", README_PATH);
 
@@ -188,7 +215,7 @@ fn generate_stats_card_example(theme: CardTheme) -> Result<String> {
     Ok(stats_card.render())
 }
 
-/// Generates a Langs Card example with dummy data
+/// Generates a Langs Card example with dummy data (vertical layout)
 fn generate_langs_card_example(theme: CardTheme) -> Result<String> {
     let settings = CardSettings {
         offset_x: 12,
@@ -201,28 +228,28 @@ fn generate_langs_card_example(theme: CardTheme) -> Result<String> {
 
     let dummy_stats = vec![
         LanguageStat {
-            name: "TypeScript".to_string(),
-            size_bytes: 125000,
+            name: "Rust".to_string(),
+            size_bytes: 45000,
             repo_count: 15,
         },
         LanguageStat {
-            name: "JavaScript".to_string(),
-            size_bytes: 98000,
+            name: "TypeScript".to_string(),
+            size_bytes: 35000,
             repo_count: 12,
         },
         LanguageStat {
-            name: "Rust".to_string(),
-            size_bytes: 75000,
+            name: "JavaScript".to_string(),
+            size_bytes: 25000,
             repo_count: 8,
         },
         LanguageStat {
             name: "Python".to_string(),
-            size_bytes: 45000,
+            size_bytes: 15000,
             repo_count: 6,
         },
         LanguageStat {
             name: "Go".to_string(),
-            size_bytes: 32000,
+            size_bytes: 10000,
             repo_count: 4,
         },
     ];
@@ -230,6 +257,57 @@ fn generate_langs_card_example(theme: CardTheme) -> Result<String> {
     let langs_card = LangsCard {
         card_settings: settings,
         layout: LayoutType::Vertical,
+        stats: dummy_stats,
+        size_weight: Some(1.0),
+        count_weight: Some(0.0),
+        max_languages: Some(5),
+    };
+
+    Ok(langs_card.render())
+}
+
+/// Generates a Langs Card example with dummy data (horizontal layout)
+fn generate_langs_card_horizontal_example(theme: CardTheme) -> Result<String> {
+    let settings = CardSettings {
+        offset_x: 12,
+        offset_y: 12,
+        theme,
+        hide_title: false,
+        hide_background: false,
+        hide_background_stroke: false,
+    };
+
+    let dummy_stats = vec![
+        LanguageStat {
+            name: "Rust".to_string(),
+            size_bytes: 45000,
+            repo_count: 15,
+        },
+        LanguageStat {
+            name: "TypeScript".to_string(),
+            size_bytes: 35000,
+            repo_count: 12,
+        },
+        LanguageStat {
+            name: "JavaScript".to_string(),
+            size_bytes: 25000,
+            repo_count: 8,
+        },
+        LanguageStat {
+            name: "Python".to_string(),
+            size_bytes: 15000,
+            repo_count: 6,
+        },
+        LanguageStat {
+            name: "Go".to_string(),
+            size_bytes: 10000,
+            repo_count: 4,
+        },
+    ];
+
+    let langs_card = LangsCard {
+        card_settings: settings,
+        layout: LayoutType::Horizontal,
         stats: dummy_stats,
         size_weight: Some(1.0),
         count_weight: Some(0.0),
@@ -266,7 +344,7 @@ fn generate_stats_card_example_transparent(theme: CardTheme) -> Result<String> {
     Ok(stats_card.render())
 }
 
-/// Generates a Langs Card example with transparent background (hide_background & hide_background_stroke enabled)
+/// Generates a Langs Card example with transparent background (hide_background & hide_background_stroke enabled) - vertical layout
 fn generate_langs_card_example_transparent(theme: CardTheme) -> Result<String> {
     let settings = CardSettings {
         offset_x: 12,
@@ -279,28 +357,28 @@ fn generate_langs_card_example_transparent(theme: CardTheme) -> Result<String> {
 
     let dummy_stats = vec![
         LanguageStat {
-            name: "TypeScript".to_string(),
-            size_bytes: 125000,
+            name: "Rust".to_string(),
+            size_bytes: 45000,
             repo_count: 15,
         },
         LanguageStat {
-            name: "JavaScript".to_string(),
-            size_bytes: 98000,
+            name: "TypeScript".to_string(),
+            size_bytes: 35000,
             repo_count: 12,
         },
         LanguageStat {
-            name: "Rust".to_string(),
-            size_bytes: 75000,
+            name: "JavaScript".to_string(),
+            size_bytes: 25000,
             repo_count: 8,
         },
         LanguageStat {
             name: "Python".to_string(),
-            size_bytes: 45000,
+            size_bytes: 15000,
             repo_count: 6,
         },
         LanguageStat {
             name: "Go".to_string(),
-            size_bytes: 32000,
+            size_bytes: 10000,
             repo_count: 4,
         },
     ];
@@ -317,12 +395,65 @@ fn generate_langs_card_example_transparent(theme: CardTheme) -> Result<String> {
     Ok(langs_card.render())
 }
 
+/// Generates a Langs Card example with transparent background (hide_background & hide_background_stroke enabled) - horizontal layout
+fn generate_langs_card_horizontal_example_transparent(theme: CardTheme) -> Result<String> {
+    let settings = CardSettings {
+        offset_x: 12,
+        offset_y: 12,
+        theme,
+        hide_title: false,
+        hide_background: true,
+        hide_background_stroke: true,
+    };
+
+    let dummy_stats = vec![
+        LanguageStat {
+            name: "Rust".to_string(),
+            size_bytes: 45000,
+            repo_count: 15,
+        },
+        LanguageStat {
+            name: "TypeScript".to_string(),
+            size_bytes: 35000,
+            repo_count: 12,
+        },
+        LanguageStat {
+            name: "JavaScript".to_string(),
+            size_bytes: 25000,
+            repo_count: 8,
+        },
+        LanguageStat {
+            name: "Python".to_string(),
+            size_bytes: 15000,
+            repo_count: 6,
+        },
+        LanguageStat {
+            name: "Go".to_string(),
+            size_bytes: 10000,
+            repo_count: 4,
+        },
+    ];
+
+    let langs_card = LangsCard {
+        card_settings: settings,
+        layout: LayoutType::Horizontal,
+        stats: dummy_stats,
+        size_weight: Some(1.0),
+        count_weight: Some(0.0),
+        max_languages: Some(5),
+    };
+
+    Ok(langs_card.render())
+}
+
 /// Generates the README content with theme examples
 fn generate_readme_content(
     stats_examples: &BTreeMap<String, String>,
     langs_examples: &BTreeMap<String, String>,
+    langs_horizontal_examples: &BTreeMap<String, String>,
     stats_transparent_examples: &BTreeMap<String, String>,
     langs_transparent_examples: &BTreeMap<String, String>,
+    langs_horizontal_transparent_examples: &BTreeMap<String, String>,
 ) -> Result<String> {
     let mut content = String::new();
 
@@ -350,14 +481,32 @@ fn generate_readme_content(
 
     content.push('\n');
 
-    // Add Langs Card section
-    content.push_str("## Langs Card\n\n");
+    // Add Langs Card Vertical section
+    content.push_str("## Langs Card (Vertical)\n\n");
     content.push_str("| Theme | Default | Transparent |\n");
     content.push_str("|-------|---------|-------------|\n");
 
     for theme_name in langs_examples.keys() {
         let default_svg = langs_examples.get(theme_name).unwrap();
         let transparent_svg = langs_transparent_examples.get(theme_name).unwrap();
+        content.push_str(&format!(
+            "| `{}` | ![{}](examples/{}) | ![{} transparent](examples/{}) |\n",
+            theme_name, theme_name, default_svg, theme_name, transparent_svg
+        ));
+    }
+
+    content.push('\n');
+
+    // Add Langs Card Horizontal section
+    content.push_str("## Langs Card (Horizontal)\n\n");
+    content.push_str("| Theme | Default | Transparent |\n");
+    content.push_str("|-------|---------|-------------|\n");
+
+    for theme_name in langs_horizontal_examples.keys() {
+        let default_svg = langs_horizontal_examples.get(theme_name).unwrap();
+        let transparent_svg = langs_horizontal_transparent_examples
+            .get(theme_name)
+            .unwrap();
         content.push_str(&format!(
             "| `{}` | ![{}](examples/{}) | ![{} transparent](examples/{}) |\n",
             theme_name, theme_name, default_svg, theme_name, transparent_svg
@@ -390,14 +539,18 @@ mod tests {
     fn test_generate_readme_content_with_empty_examples() {
         let stats_examples = BTreeMap::new();
         let langs_examples = BTreeMap::new();
+        let langs_horizontal_examples = BTreeMap::new();
         let stats_transparent_examples = BTreeMap::new();
         let langs_transparent_examples = BTreeMap::new();
+        let langs_horizontal_transparent_examples = BTreeMap::new();
 
         let result = generate_readme_content(
             &stats_examples,
             &langs_examples,
+            &langs_horizontal_examples,
             &stats_transparent_examples,
             &langs_transparent_examples,
+            &langs_horizontal_transparent_examples,
         );
         assert!(result.is_ok());
 
@@ -406,7 +559,8 @@ mod tests {
         // Should still have intro and headers
         assert!(content.contains("# How to add new themes?"));
         assert!(content.contains("## Stats Card"));
-        assert!(content.contains("## Langs Card"));
+        assert!(content.contains("## Langs Card (Vertical)"));
+        assert!(content.contains("## Langs Card (Horizontal)"));
 
         // But no theme entries
         assert!(!content.contains("| `"));
@@ -434,13 +588,17 @@ mod tests {
         );
 
         let langs_examples = BTreeMap::new();
+        let langs_horizontal_examples = BTreeMap::new();
         let langs_transparent_examples = BTreeMap::new();
+        let langs_horizontal_transparent_examples = BTreeMap::new();
 
         let result = generate_readme_content(
             &stats_examples,
             &langs_examples,
+            &langs_horizontal_examples,
             &stats_transparent_examples,
             &langs_transparent_examples,
+            &langs_horizontal_transparent_examples,
         );
         assert!(result.is_ok());
 
@@ -556,11 +714,33 @@ mod tests {
             "langs-card-light-transparent.svg".to_string(),
         );
 
+        let mut langs_horizontal_examples = BTreeMap::new();
+        langs_horizontal_examples.insert(
+            "dark".to_string(),
+            "langs-card-dark-horizontal.svg".to_string(),
+        );
+        langs_horizontal_examples.insert(
+            "light".to_string(),
+            "langs-card-light-horizontal.svg".to_string(),
+        );
+
+        let mut langs_horizontal_transparent_examples = BTreeMap::new();
+        langs_horizontal_transparent_examples.insert(
+            "dark".to_string(),
+            "langs-card-dark-horizontal-transparent.svg".to_string(),
+        );
+        langs_horizontal_transparent_examples.insert(
+            "light".to_string(),
+            "langs-card-light-horizontal-transparent.svg".to_string(),
+        );
+
         let result = generate_readme_content(
             &stats_examples,
             &langs_examples,
+            &langs_horizontal_examples,
             &stats_transparent_examples,
             &langs_transparent_examples,
+            &langs_horizontal_transparent_examples,
         );
         assert!(result.is_ok());
 
@@ -573,7 +753,8 @@ mod tests {
 
         // Check sections
         assert!(content.contains("## Stats Card"));
-        assert!(content.contains("## Langs Card"));
+        assert!(content.contains("## Langs Card (Vertical)"));
+        assert!(content.contains("## Langs Card (Horizontal)"));
 
         // Check table headers
         assert!(content.contains("| Theme | Default | Transparent |"));

@@ -1,0 +1,91 @@
+<svg
+  width="300"
+  height="150"
+  viewBox="0 0 300 150"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  role="img"
+  aria-labelledby="title-id"
+  aria-describedby="description-id"
+>
+  <style>
+  /* 
+    * Card styles for GitHub StatCrab
+    * 
+    * This file contains the styles for the base card component.
+  */
+  
+  .title {
+    font: 800 17px "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  
+  .statsCard > .row > .label, .statsCard > .row > .value {
+    font: 600 15px "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  
+  .langsCard > .row > .label, .langsCard > .row > .value {
+    font: 400 12px "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  
+  /**
+   * Dracula theme.
+   * Based on the popular Dracula color scheme.
+   */
+  
+  .title {
+    fill: #ff79c6;
+  }
+  
+  .label, .value {
+    fill: #f8f8f2;
+  }
+  
+  .icon {
+    fill: #50fa7b;
+  }
+  
+  .background {
+    fill: #282a36;
+    stroke: #44475a;
+  }
+  
+  .progressBarBackground {
+    fill: #44475a;
+  }
+  </style>
+  <title id="title-id">Most used languages</title>
+  <desc id="description-id">GitHub top languages</desc>
+  <rect class="background" x="0.5" y="0.5" rx="5" width="299" height="149" stroke-opacity="1"/>
+  <g transform="translate(12, 30)"><text x="0" y="0" class="title">Most used languages</text></g>
+  <g class="langsCard" x="0" y="0">
+    <g class="horizontal-bar">
+      <svg width="276" x="12" y="45">
+        <mask id="bar-mask">
+            <rect x="0" y="0" width="276" height="8" fill="white" rx="5"/>
+        </mask>
+          <rect mask="url(#bar-mask)" x="0" y="0" width="96" height="8" fill="#dea584"/>
+          <rect mask="url(#bar-mask)" x="96" y="0" width="74" height="8" fill="#3178c6"/>
+          <rect mask="url(#bar-mask)" x="170" y="0" width="53" height="8" fill="#f1e05a"/>
+          <rect mask="url(#bar-mask)" x="223" y="0" width="32" height="8" fill="#3572A5"/>
+          <rect mask="url(#bar-mask)" x="255" y="0" width="21" height="8" fill="#00ADD8"/>
+      </svg>
+    </g>
+    <g class="row">
+    <circle cx="16" cy="73" r="4" fill="#dea584"/>
+    <text x="26" y="77" class="label">Rust 34.62%</text>
+    <circle cx="162" cy="73" r="4" fill="#3572A5"/>
+    <text x="172" y="77" class="label">Python 11.54%</text>
+    </g>
+    <g class="row">
+    <circle cx="16" cy="98" r="4" fill="#3178c6"/>
+    <text x="26" y="102" class="label">TypeScript 26.92%</text>
+    <circle cx="162" cy="98" r="4" fill="#00ADD8"/>
+    <text x="172" y="102" class="label">Go 7.69%</text>
+    </g>
+    <g class="row">
+    <circle cx="16" cy="123" r="4" fill="#f1e05a"/>
+    <text x="26" y="127" class="label">JavaScript 19.23%</text>
+    </g>
+
+  </g>
+</svg>
