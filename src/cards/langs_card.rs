@@ -200,24 +200,45 @@ impl LangsCard {
 
                 y += Self::BAR_HEIGHT + bar_spacing;
 
-                // Add language labels below the bar
+                // Add language labels below the bar in columnar order (1,3 / 2,4)
                 let mut label_y = y;
-                for chunk in top_langs.chunks(2) {
+                let num_rows = top_langs.len().div_ceil(2);
+
+                for row_index in 0..num_rows {
                     let mut row_items = Vec::new();
 
-                    for (col_index, stat) in chunk.iter().enumerate() {
+                    // First column: languages at positions 0, 2, 4, ...
+                    if let Some(stat) = top_langs.get(row_index) {
                         let color = gel_language_color(&stat.name);
                         let label = &stat.name;
                         let rank = stat.rank(
                             self.size_weight.unwrap_or(1.0),
                             self.count_weight.unwrap_or(0.0),
                         );
-                        // Value is the percentage of the total rank.
+                        let value = rank / total_rank * 100.0;
+
+                        row_items.push(Self::render_line_horizontal(
+                            &color,
+                            label,
+                            value,
+                            self.card_settings.offset_x,
+                            label_y,
+                        ));
+                    }
+
+                    // Second column: languages at positions num_rows, num_rows+1, ...
+                    if let Some(stat) = top_langs.get(row_index + num_rows) {
+                        let color = gel_language_color(&stat.name);
+                        let label = &stat.name;
+                        let rank = stat.rank(
+                            self.size_weight.unwrap_or(1.0),
+                            self.count_weight.unwrap_or(0.0),
+                        );
                         let value = rank / total_rank * 100.0;
 
                         let x_offset = self.card_settings.offset_x
-                            + col_index as u32
-                                * (Self::HORIZONTAL_COLUMN_WIDTH + Self::HORIZONTAL_COLUMN_GAP);
+                            + Self::HORIZONTAL_COLUMN_WIDTH
+                            + Self::HORIZONTAL_COLUMN_GAP;
 
                         row_items.push(Self::render_line_horizontal(
                             &color, label, value, x_offset, label_y,
@@ -905,6 +926,120 @@ mod tests {
 
             // Should have mask
             assert!(rendered.contains("<mask id=\"bar-mask\">"));
+        }
+
+        #[test]
+        fn test_render_horizontal_layout_columnar_ordering() {
+            let card = LangsCard {
+                card_settings: CardSettings {
+                    offset_x: 10,
+                    offset_y: 20,
+                    hide_title: false,
+                    theme: CardTheme::TransparentBlue,
+                    hide_background: false,
+                    hide_background_stroke: false,
+                },
+                layout: LayoutType::Horizontal,
+                stats: vec![
+                    LanguageStat {
+                        name: "Go".to_string(), // Should be in position (0,0) - first column, first row
+                        size_bytes: 2000,
+                        repo_count: 5,
+                    },
+                    LanguageStat {
+                        name: "JavaScript".to_string(), // Should be in position (0,1) - first column, second row
+                        size_bytes: 1300,
+                        repo_count: 8,
+                    },
+                    LanguageStat {
+                        name: "Rust".to_string(), // Should be in position (1,0) - second column, first row
+                        size_bytes: 1000,
+                        repo_count: 10,
+                    },
+                    LanguageStat {
+                        name: "Python".to_string(), // Should be in position (1,1) - second column, second row
+                        size_bytes: 800,
+                        repo_count: 3,
+                    },
+                ],
+                size_weight: Some(1.0),
+                count_weight: Some(0.0),
+                max_languages: Some(4),
+            };
+
+            let svg = card.render();
+
+            // Extract row groups to verify ordering
+            let rows: Vec<&str> = svg.matches(r#"<g class="row">"#).collect();
+            assert_eq!(rows.len(), 2, "Should have exactly 2 rows");
+
+            // First row should contain Go (first element) and Rust (third element)
+            // Second row should contain JavaScript (second element) and Python (fourth element)
+            let first_row_start = svg.find(r#"<g class="row">"#).unwrap();
+            let first_row_end = svg[first_row_start..].find("</g>").unwrap() + first_row_start;
+            let first_row_content = &svg[first_row_start..first_row_end];
+
+            // Find second row
+            let second_row_start =
+                svg[first_row_end..].find(r#"<g class="row">"#).unwrap() + first_row_end;
+            let second_row_end = svg[second_row_start..].find("</g>").unwrap() + second_row_start;
+            let second_row_content = &svg[second_row_start..second_row_end];
+
+            // Verify first row contains Go and Rust (positions 0 and 2)
+            assert!(
+                first_row_content.contains(">Go"),
+                "First row should contain Go"
+            );
+            assert!(
+                first_row_content.contains(">Rust"),
+                "First row should contain Rust"
+            );
+            assert!(
+                !first_row_content.contains(">JavaScript"),
+                "First row should not contain JavaScript"
+            );
+            assert!(
+                !first_row_content.contains(">Python"),
+                "First row should not contain Python"
+            );
+
+            // Verify second row contains JavaScript and Python (positions 1 and 3)
+            assert!(
+                second_row_content.contains(">JavaScript"),
+                "Second row should contain JavaScript"
+            );
+            assert!(
+                second_row_content.contains(">Python"),
+                "Second row should contain Python"
+            );
+            assert!(
+                !second_row_content.contains(">Go"),
+                "Second row should not contain Go"
+            );
+            assert!(
+                !second_row_content.contains(">Rust"),
+                "Second row should not contain Rust"
+            );
+
+            // Verify positioning: Go should be in first column (x=24), Rust should be in second column (x=170)
+            // First column text starts at offset_x + circle_size + gap = 10 + 8 + 6 = 24
+            // Second column text starts at offset_x + column_width + gap + circle_size + gap = 10 + 130 + 16 + 8 + 6 = 170
+            assert!(
+                first_row_content.contains("x=\"24\""),
+                "Go should be in first column at x=24"
+            );
+            assert!(
+                first_row_content.contains("x=\"170\""),
+                "Rust should be in second column at x=170"
+            );
+            assert!(
+                second_row_content.contains("x=\"24\""),
+                "JavaScript should be in first column at x=24"
+            );
+            assert!(
+                second_row_content.contains("x=\"170\""),
+                "Python should be in second column at x=170"
+            );
         }
     }
 }
