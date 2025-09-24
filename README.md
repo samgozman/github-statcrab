@@ -216,3 +216,11 @@ Run the tests with:
 ```bash
 make test
 ```
+
+## FAQ
+
+<details>
+<summary>Why Rust???</summary>
+<img width="1080" height="1400" alt="image" src="https://github.com/user-attachments/assets/bd268ca2-ce36-48e6-a79d-565ea150b917" />
+
+</details>
