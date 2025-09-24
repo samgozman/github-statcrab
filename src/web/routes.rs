@@ -487,10 +487,7 @@ impl CardSettingsQuery {
                 .as_deref()
                 .and_then(|s| s.parse::<u32>().ok())
                 .unwrap_or(12),
-            theme: self
-                .theme
-                .map(|t| t.into())
-                .unwrap_or(CardTheme::TransparentBlue),
+            theme: self.theme.map(|t| t.into()).unwrap_or(CardTheme::Light),
             hide_title: self
                 .hide_title
                 .as_deref()
