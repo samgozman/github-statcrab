@@ -17,12 +17,15 @@
       - [Available Statistics to Hide](#available-statistics-to-hide)
   - [Themes](#themes)
     - [Adding new themes](#adding-new-themes)
-  - [Usage Guide](#usage-guide)
-    - [For Developers](#for-developers)
-      - [Running From Docker Latest Image](#running-from-docker-latest-image)
-      - [Build \& Run Server Locally](#build--run-server-locally)
-        - [API Endpoints](#api-endpoints)
-        - [Testing](#testing)
+  - [Deployment Guide](#deployment-guide)
+    - [First steps](#first-steps)
+    - [TODO](#todo)
+  - [Developers guide](#developers-guide)
+    - [Running From Docker Latest Image](#running-from-docker-latest-image)
+    - [Build \& Run Server Locally](#build--run-server-locally)
+    - [Testing](#testing)
+  - [FAQ](#faq)
+  - [Special Thanks](#special-thanks)
 
 </details>
 
@@ -117,11 +120,24 @@ Adding new themes to the `github-statcrab` is pretty easy. You don't even need t
 
 Github Actions will automatically do the rest for you, including building the [themes readme file](https://github.com/samgozman/github-statcrab/blob/main/assets/css/themes/README.md) page with previews of all themes (yes, it's automated!).
 
-## Usage Guide
+## Deployment Guide
 
-This guide will help you set up and run the `github-statcrab` server, as well as how to use its API endpoints.
+This guide will help you set up and run the `github-statcrab` server.
 
-### For Developers
+### First steps
+
+Get a GitHub Personal Access Token:
+
+- Go to [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens)
+- Generate new token (classic) with `repo` and `user` scopes
+
+You will need this token to authenticate with the GitHub API.
+
+### TODO
+
+## Developers guide
+
+First of all you need to set up your environment variables. You can do this by creating a `.env` file in the root directory of the project. You can use the provided `.env.example` file as a template.
 
 1. Copy the example environment file:
 
@@ -135,17 +151,13 @@ This guide will help you set up and run the `github-statcrab` server, as well as
    GITHUB_TOKEN=your_github_personal_access_token_here
    ```
 
-3. Get a GitHub Personal Access Token:
-   - Go to GitHub Settings > Developer settings > Personal access tokens
-   - Generate a new token with `public_repo` and `read:user` scopes
-
-4. *(optional)* add a test GitHub username for local e2e testing:
+3. *(optional)* add a test GitHub username for local e2e testing:
 
    ```env
    TEST_GITHUB_USERNAME=your_github_username
    ```
 
-5. *(optional)* Set up Sentry for error tracking:
+4. *(optional)* Set up Sentry for error tracking:
    You can also set optional Sentry configuration for error tracking.
 
    ```env
@@ -153,7 +165,7 @@ This guide will help you set up and run the `github-statcrab` server, as well as
    SENTRY_ENVIRONMENT=development
    ```
 
-6. *(optional)* Configure cache sizes:
+5. *(optional)* Configure cache sizes:
    You can adjust the cache sizes for user stats and language stats in the `.env` file.
 
    ```env
@@ -165,7 +177,7 @@ This guide will help you set up and run the `github-statcrab` server, as well as
    CACHE_USER_LANGUAGES_TTL_SECONDS=3600
    ```
 
-7. *(optional)* Restrict API access to specific users:
+6. *(optional)* Restrict API access to specific users:
    You can limit which GitHub usernames are allowed to use the API by setting an allowlist in the `.env` file.
 
    ```env
@@ -174,7 +186,7 @@ This guide will help you set up and run the `github-statcrab` server, as well as
    ALLOWED_USERNAMES=user1,user2,user3
    ```
 
-#### Running From Docker Latest Image
+### Running From Docker Latest Image
 
 You can run the server using Docker. Make sure to replace `your_github_personal_access_token_here` with your actual GitHub Personal Access Token.
 
@@ -183,7 +195,7 @@ docker pull ghcr.io/samgozman/github-statcrab/server:latest
 docker run -p 3000:3000 --env-file .env ghcr.io/samgozman/github-statcrab/server:latest
 ```
 
-#### Build & Run Server Locally
+### Build & Run Server Locally
 
 To run the server locally, ensure you have Rust and Cargo installed. You can install them from [rustup.rs](https://rustup.rs/).
 
@@ -195,21 +207,7 @@ make run
 
 The server will start on `http://0.0.0.0:3000` and will automatically read your GitHub token from the `.env` file.
 
-##### API Endpoints
-
-Once the server is running, you can access the following endpoints:
-
-- **Stats Card**: `GET /stats-card?username=<github_username>`
-  - Example: `http://localhost:3000/stats-card?username=samgozman`
-  - Optional parameters: `theme`, `hide`, `hide_title`, `hide_background`, etc.
-
-- **Languages Card**: `GET /langs-card?username=<github_username>`  
-  - Example: `http://localhost:3000/langs-card?username=samgozman`
-  - Optional parameters: `theme`, `layout`, `max_languages`, etc.
-
-Both endpoints return SVG images that can be embedded in README files or web pages.
-
-##### Testing
+### Testing
 
 Run the tests with:
 
@@ -224,3 +222,7 @@ make test
 <img width="1080" height="1400" alt="image" src="https://github.com/user-attachments/assets/bd268ca2-ce36-48e6-a79d-565ea150b917" />
 
 </details>
+
+## Special Thanks
+
+Special thanks to [@anuraghazra](https://github.com/anuraghazra) and his amazing [github-readme-stats](https://github.com/anuraghazra/github-readme-stats) for the inspiration!
