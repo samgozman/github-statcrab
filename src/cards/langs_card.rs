@@ -124,6 +124,7 @@ impl LangsCard {
     const VALUE_SIZE: u32 = 46;
     const VERTICAL_VALUE_X_OFFSET: u32 = 10;
     const BAR_HEIGHT: u32 = 8;
+    const VERTICAL_TOP_PADDING: u32 = 12;
 
     // Horizontal layout constants
     const HORIZONTAL_COLUMN_WIDTH: u32 = 130;
@@ -142,7 +143,13 @@ impl LangsCard {
         };
 
         // Starting baseline (text y) for the first row.
-        let mut y: u32 = header_size_y + self.card_settings.offset_y;
+        // For vertical layout when title is hidden, add some top padding
+        let mut y: u32 =
+            if self.card_settings.hide_title && matches!(self.layout, LayoutType::Vertical) {
+                header_size_y + self.card_settings.offset_y + Self::VERTICAL_TOP_PADDING
+            } else {
+                header_size_y + self.card_settings.offset_y
+            };
 
         let max_langs = self
             .max_languages
