@@ -118,7 +118,7 @@ pub struct LangsCard {
 
 impl LangsCard {
     const MAX_LANGUAGES: u64 = 20;
-    const TITLE_BODY_OFFSET: u32 = 25;
+    const TITLE_BODY_OFFSET: u32 = 26;
     const ROW_Y_STEP: u32 = 36;
     const VERTICAL_BAR_WIDTH: u32 = 220;
     const VALUE_SIZE: u32 = 46;
@@ -130,7 +130,7 @@ impl LangsCard {
     const HORIZONTAL_COLUMN_GAP: u32 = 16;
     const HORIZONTAL_CIRCLE_SIZE: u32 = 8;
     const HORIZONTAL_CIRCLE_TEXT_GAP: u32 = 6;
-    const HORIZONTAL_ROW_Y_STEP: u32 = 25;
+    const HORIZONTAL_ROW_Y_STEP: u32 = 24;
 
     pub fn render(&self) -> Svg {
         use crate::cards::card::Card;
