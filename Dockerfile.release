@@ -8,8 +8,11 @@ COPY target/release/server /app
 # GITHUB_TOKEN is required for the application to access GitHub API
 ENV GITHUB_TOKEN=""
 
-# Expose port 3000
-EXPOSE 3000
+# Set default port (can be overridden)
+ENV PORT=3000
+
+# Expose the port specified by PORT environment variable
+EXPOSE $PORT
 
 # Set the entrypoint
 CMD ["./app"]

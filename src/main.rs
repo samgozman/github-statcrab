@@ -68,8 +68,14 @@ fn main() -> Result<()> {
         .enable_all()
         .build()?
         .block_on(async {
+            // Get port from environment variable or default to 3000
+            let port = std::env::var("PORT")
+                .unwrap_or_else(|_| "3000".to_string())
+                .parse::<u16>()
+                .expect("PORT must be a valid port number");
+
             // Bind address (0.0.0.0 to be accessible in containers; localhost otherwise)
-            let addr: SocketAddr = "0.0.0.0:3000".parse().expect("valid socket address");
+            let addr: SocketAddr = ([0, 0, 0, 0], port).into();
 
             // Create the TCP listener
             let listener = match tokio::net::TcpListener::bind(addr).await {
