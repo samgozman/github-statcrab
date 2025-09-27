@@ -19,7 +19,7 @@
     - [Adding new themes](#adding-new-themes)
   - [Deployment Guide](#deployment-guide)
     - [First steps](#first-steps)
-    - [TODO](#todo)
+    - [Deploy with Railway](#deploy-with-railway)
   - [Developers guide](#developers-guide)
     - [Running From Docker Latest Image](#running-from-docker-latest-image)
     - [Build \& Run Server Locally](#build--run-server-locally)
@@ -133,7 +133,11 @@ Get a GitHub Personal Access Token:
 
 You will need this token to authenticate with the GitHub API.
 
-### TODO
+### Deploy with Railway
+
+You can easily deploy the `github-statcrab` server using template for Railway. Just click the button below to get started:
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/github-statcrab?referralCode=samgozman&utm_medium=integration&utm_source=template&utm_campaign=generic)
 
 ## Developers guide
 
