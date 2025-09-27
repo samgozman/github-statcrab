@@ -1,7 +1,7 @@
 <svg
   width="300"
-  height="247"
-  viewBox="0 0 300 247"
+  height="248"
+  viewBox="0 0 300 248"
   fill="none"
   xmlns="http://www.w3.org/2000/svg"
   role="img"
@@ -55,45 +55,45 @@
   </style>
   <title id="title-id">Most used languages</title>
   <desc id="description-id">GitHub top languages</desc>
-  <rect class="background" x="0.5" y="0.5" rx="5" width="299" height="246" stroke-opacity="1"/>
+  <rect class="background" x="0.5" y="0.5" rx="5" width="299" height="247" stroke-opacity="1"/>
   <g transform="translate(12, 30)"><text x="0" y="0" class="title">Most used languages</text></g>
   <g class="langsCard" x="0" y="0">
     <g class="row">
-      <text x="14" y="55" class="label">Rust</text>
-      <text x="242" y="71" class="value">34.62%</text>
-      <svg width="220" x="12" y="63">
+      <text x="14" y="56" class="label">Rust</text>
+      <text x="242" y="72" class="value">34.62%</text>
+      <svg width="220" x="12" y="64">
           <rect rx="5" ry="5" x="0" y="0" width="220" height="8" class="progressBarBackground"/>
           <rect rx="5" ry="5" x="0" y="0" width="76" height="8" fill="#dea584"/>
       </svg>
     </g>
     <g class="row">
-      <text x="14" y="91" class="label">TypeScript</text>
-      <text x="242" y="107" class="value">26.92%</text>
-      <svg width="220" x="12" y="99">
+      <text x="14" y="92" class="label">TypeScript</text>
+      <text x="242" y="108" class="value">26.92%</text>
+      <svg width="220" x="12" y="100">
           <rect rx="5" ry="5" x="0" y="0" width="220" height="8" class="progressBarBackground"/>
           <rect rx="5" ry="5" x="0" y="0" width="59" height="8" fill="#3178c6"/>
       </svg>
     </g>
     <g class="row">
-      <text x="14" y="127" class="label">JavaScript</text>
-      <text x="242" y="143" class="value">19.23%</text>
-      <svg width="220" x="12" y="135">
+      <text x="14" y="128" class="label">JavaScript</text>
+      <text x="242" y="144" class="value">19.23%</text>
+      <svg width="220" x="12" y="136">
           <rect rx="5" ry="5" x="0" y="0" width="220" height="8" class="progressBarBackground"/>
           <rect rx="5" ry="5" x="0" y="0" width="42" height="8" fill="#f1e05a"/>
       </svg>
     </g>
     <g class="row">
-      <text x="14" y="163" class="label">Python</text>
-      <text x="242" y="179" class="value">11.54%</text>
-      <svg width="220" x="12" y="171">
+      <text x="14" y="164" class="label">Python</text>
+      <text x="242" y="180" class="value">11.54%</text>
+      <svg width="220" x="12" y="172">
           <rect rx="5" ry="5" x="0" y="0" width="220" height="8" class="progressBarBackground"/>
           <rect rx="5" ry="5" x="0" y="0" width="25" height="8" fill="#3572A5"/>
       </svg>
     </g>
     <g class="row">
-      <text x="14" y="199" class="label">Go</text>
-      <text x="242" y="215" class="value">7.69%</text>
-      <svg width="220" x="12" y="207">
+      <text x="14" y="200" class="label">Go</text>
+      <text x="242" y="216" class="value">7.69%</text>
+      <svg width="220" x="12" y="208">
           <rect rx="5" ry="5" x="0" y="0" width="220" height="8" class="progressBarBackground"/>
           <rect rx="5" ry="5" x="0" y="0" width="17" height="8" fill="#00ADD8"/>
       </svg>

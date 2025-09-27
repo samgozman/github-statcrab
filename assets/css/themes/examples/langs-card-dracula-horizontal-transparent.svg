@@ -1,7 +1,7 @@
 <svg
   width="300"
-  height="150"
-  viewBox="0 0 300 150"
+  height="148"
+  viewBox="0 0 300 148"
   fill="none"
   xmlns="http://www.w3.org/2000/svg"
   role="img"
@@ -59,7 +59,7 @@
   <g transform="translate(12, 30)"><text x="0" y="0" class="title">Most used languages</text></g>
   <g class="langsCard" x="0" y="0">
     <g class="horizontal-bar">
-      <svg width="276" x="12" y="45">
+      <svg width="276" x="12" y="46">
         <mask id="bar-mask">
             <rect x="0" y="0" width="276" height="8" fill="white" rx="5"/>
         </mask>
@@ -71,10 +71,10 @@
       </svg>
     </g>
     <g class="row">
-    <circle cx="16" cy="73" r="4" fill="#dea584"/>
-    <text x="26" y="77" class="label">Rust 34.62%</text>
-    <circle cx="162" cy="73" r="4" fill="#3572A5"/>
-    <text x="172" y="77" class="label">Python 11.54%</text>
+    <circle cx="16" cy="74" r="4" fill="#dea584"/>
+    <text x="26" y="78" class="label">Rust 34.62%</text>
+    <circle cx="162" cy="74" r="4" fill="#3572A5"/>
+    <text x="172" y="78" class="label">Python 11.54%</text>
     </g>
     <g class="row">
     <circle cx="16" cy="98" r="4" fill="#3178c6"/>
@@ -83,8 +83,8 @@
     <text x="172" y="102" class="label">Go 7.69%</text>
     </g>
     <g class="row">
-    <circle cx="16" cy="123" r="4" fill="#f1e05a"/>
-    <text x="26" y="127" class="label">JavaScript 19.23%</text>
+    <circle cx="16" cy="122" r="4" fill="#f1e05a"/>
+    <text x="26" y="126" class="label">JavaScript 19.23%</text>
     </g>
 
   </g>
