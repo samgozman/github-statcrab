@@ -1,6 +1,6 @@
 [package]
 name = "github-statcrab"
-version = "0.1.6"
+version = "0.1.7"
 edition = "2024"
 license = "MIT"
 readme = "README.md"
@@ -8,12 +8,12 @@ homepage = "https://github.com/samgozman/github-statcrab"
 repository = "https://github.com/samgozman/github-statcrab"
 authors = ["Sam Gozman <sam@gozman.space>"]
 description = "GitHub profile stats for readme generated on the fly"
-rust-version = "1.89.0"
+rust-version = "1.90.0"
 
 [dependencies]
 anyhow = "1.0.100"
 axum = "0.8.4"
-serde = { version = "1.0.226", features = ["derive"] }
+serde = { version = "1.0.227", features = ["derive"] }
 serde_json = "1.0.145"
 tokio = { version = "1.47.1", features = [
   "rt-multi-thread",
@@ -29,7 +29,7 @@ graphql_client = "0.14.0"
 thiserror = "2.0.16"
 dotenvy = "0.15.7"
 serde_yaml = { version = "0.9.34-deprecated", optional = true }
-sentry = { version = "0.42.0", features = [
+sentry = { version = "0.43.0", features = [
   "tower-axum-matched-path",
   "tracing",
   "tower",
@@ -37,8 +37,8 @@ sentry = { version = "0.42.0", features = [
 tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
 tower = "0.5.1"
-moka = { version = "0.12.10", features = ["future"] }
-tempfile = { version = "3.14.0", optional = true }
+moka = { version = "0.12.11", features = ["future"] }
+tempfile = { version = "3.23.0", optional = true }
 
 [dev-dependencies]
 quick-xml = "0.38.3"
