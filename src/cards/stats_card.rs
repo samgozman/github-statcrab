@@ -41,7 +41,7 @@ impl StatsCard {
     // Constants for rendering the card (in pixels).
     const MAX_USERNAME_LEN: usize = 13;
     const VALUE_SIZE: u32 = 31;
-    const LABEL_SIZE: u32 = 220;
+    const LABEL_SIZE: u32 = 222;
     const ICON_SIZE: u32 = 15;
     const ICON_OFFSET: u32 = 8;
     const TITLE_BODY_OFFSET: u32 = 1;
