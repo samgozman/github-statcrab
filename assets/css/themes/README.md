@@ -38,3 +38,12 @@ The **Transparent** column shows theme variants with `hide_background=true` and 
 | `light` | ![light](examples/langs-card-light-horizontal.svg) | ![light transparent](examples/langs-card-light-horizontal-transparent.svg) |
 | `monokai` | ![monokai](examples/langs-card-monokai-horizontal.svg) | ![monokai transparent](examples/langs-card-monokai-horizontal-transparent.svg) |
 | `transparent_blue` | ![transparent_blue](examples/langs-card-transparent_blue-horizontal.svg) | ![transparent_blue transparent](examples/langs-card-transparent_blue-horizontal-transparent.svg) |
+
+## Error Card
+
+Error cards are displayed when there's an issue with fetching data from the GitHub API. They always use the default light theme styling.
+
+| Type | Example |
+|------|--------|
+| Short Message | ![Error Card Short](examples/error-card-short.svg) |
+| Long Message | ![Error Card Long](examples/error-card-long.svg) |

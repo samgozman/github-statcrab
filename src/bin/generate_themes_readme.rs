@@ -6,6 +6,7 @@ use std::fs;
 use std::path::Path;
 
 use github_statcrab::cards::card::{CardSettings, CardTheme};
+use github_statcrab::cards::error_card::ErrorCard;
 use github_statcrab::cards::langs_card::{LangsCard, LanguageStat, LayoutType};
 use github_statcrab::cards::stats_card::StatsCard;
 
@@ -45,9 +46,6 @@ fn parse_card_theme_from_filename(filename_stem: &str) -> Option<CardTheme> {
     // Use the macro-generated parser function (completely dynamic!)
     parse_theme_from_pascal_case(&pascal_case)
 }
-
-// Remove the manual implementation - no longer needed!
-// The macro generates this function automatically from CSS files
 
 fn main() -> Result<()> {
     // Create examples directory
@@ -127,15 +125,35 @@ fn main() -> Result<()> {
             .insert(theme_name.clone(), langs_horizontal_transparent_file);
     }
 
+    // Generate Error Card examples (always use default theme)
+    let error_short_svg = generate_error_card_short_example()?;
+    let error_short_file = "error-card-short.svg".to_string();
+    fs::write(
+        Path::new(EXAMPLES_DIR).join(&error_short_file),
+        &error_short_svg,
+    )
+    .context("Failed to write error card short SVG")?;
+
+    let error_long_svg = generate_error_card_long_example()?;
+    let error_long_file = "error-card-long.svg".to_string();
+    fs::write(
+        Path::new(EXAMPLES_DIR).join(&error_long_file),
+        &error_long_svg,
+    )
+    .context("Failed to write error card long SVG")?;
+
     // Generate new README content with fixed intro
-    let new_readme = generate_readme_content(
-        &stats_examples,
-        &langs_examples,
-        &langs_horizontal_examples,
-        &stats_transparent_examples,
-        &langs_transparent_examples,
-        &langs_horizontal_transparent_examples,
-    )?;
+    let examples = ThemeExamples {
+        stats_examples: &stats_examples,
+        langs_examples: &langs_examples,
+        langs_horizontal_examples: &langs_horizontal_examples,
+        stats_transparent_examples: &stats_transparent_examples,
+        langs_transparent_examples: &langs_transparent_examples,
+        langs_horizontal_transparent_examples: &langs_horizontal_transparent_examples,
+        error_short_file: &error_short_file,
+        error_long_file: &error_long_file,
+    };
+    let new_readme = generate_readme_content(examples)?;
 
     // Write updated README
     fs::write(README_PATH, new_readme).context("Failed to write updated README.md")?;
@@ -446,15 +464,32 @@ fn generate_langs_card_horizontal_example_transparent(theme: CardTheme) -> Resul
     Ok(langs_card.render())
 }
 
+/// Generates an Error Card example with a short message
+fn generate_error_card_short_example() -> Result<String> {
+    let error_card = ErrorCard::new("Invalid username provided".to_string());
+    Ok(error_card.render())
+}
+
+/// Generates an Error Card example with a long message that wraps to multiple lines
+fn generate_error_card_long_example() -> Result<String> {
+    let error_card = ErrorCard::new("The GitHub API returned an error when trying to fetch user statistics. This might be due to rate limiting or an invalid username. Please check your configuration and try again.".to_string());
+    Ok(error_card.render())
+}
+
+/// Structure to hold all theme examples for README generation
+struct ThemeExamples<'a> {
+    stats_examples: &'a BTreeMap<String, String>,
+    langs_examples: &'a BTreeMap<String, String>,
+    langs_horizontal_examples: &'a BTreeMap<String, String>,
+    stats_transparent_examples: &'a BTreeMap<String, String>,
+    langs_transparent_examples: &'a BTreeMap<String, String>,
+    langs_horizontal_transparent_examples: &'a BTreeMap<String, String>,
+    error_short_file: &'a str,
+    error_long_file: &'a str,
+}
+
 /// Generates the README content with theme examples
-fn generate_readme_content(
-    stats_examples: &BTreeMap<String, String>,
-    langs_examples: &BTreeMap<String, String>,
-    langs_horizontal_examples: &BTreeMap<String, String>,
-    stats_transparent_examples: &BTreeMap<String, String>,
-    langs_transparent_examples: &BTreeMap<String, String>,
-    langs_horizontal_transparent_examples: &BTreeMap<String, String>,
-) -> Result<String> {
+fn generate_readme_content(examples: ThemeExamples) -> Result<String> {
     let mut content = String::new();
 
     // Add fixed intro content
@@ -470,9 +505,9 @@ fn generate_readme_content(
     content.push_str("| Theme | Default | Transparent |\n");
     content.push_str("|-------|---------|-------------|\n");
 
-    for theme_name in stats_examples.keys() {
-        let default_svg = stats_examples.get(theme_name).unwrap();
-        let transparent_svg = stats_transparent_examples.get(theme_name).unwrap();
+    for theme_name in examples.stats_examples.keys() {
+        let default_svg = examples.stats_examples.get(theme_name).unwrap();
+        let transparent_svg = examples.stats_transparent_examples.get(theme_name).unwrap();
         content.push_str(&format!(
             "| `{}` | ![{}](examples/{}) | ![{} transparent](examples/{}) |\n",
             theme_name, theme_name, default_svg, theme_name, transparent_svg
@@ -486,9 +521,9 @@ fn generate_readme_content(
     content.push_str("| Theme | Default | Transparent |\n");
     content.push_str("|-------|---------|-------------|\n");
 
-    for theme_name in langs_examples.keys() {
-        let default_svg = langs_examples.get(theme_name).unwrap();
-        let transparent_svg = langs_transparent_examples.get(theme_name).unwrap();
+    for theme_name in examples.langs_examples.keys() {
+        let default_svg = examples.langs_examples.get(theme_name).unwrap();
+        let transparent_svg = examples.langs_transparent_examples.get(theme_name).unwrap();
         content.push_str(&format!(
             "| `{}` | ![{}](examples/{}) | ![{} transparent](examples/{}) |\n",
             theme_name, theme_name, default_svg, theme_name, transparent_svg
@@ -502,9 +537,10 @@ fn generate_readme_content(
     content.push_str("| Theme | Default | Transparent |\n");
     content.push_str("|-------|---------|-------------|\n");
 
-    for theme_name in langs_horizontal_examples.keys() {
-        let default_svg = langs_horizontal_examples.get(theme_name).unwrap();
-        let transparent_svg = langs_horizontal_transparent_examples
+    for theme_name in examples.langs_horizontal_examples.keys() {
+        let default_svg = examples.langs_horizontal_examples.get(theme_name).unwrap();
+        let transparent_svg = examples
+            .langs_horizontal_transparent_examples
             .get(theme_name)
             .unwrap();
         content.push_str(&format!(
@@ -512,6 +548,22 @@ fn generate_readme_content(
             theme_name, theme_name, default_svg, theme_name, transparent_svg
         ));
     }
+
+    content.push('\n');
+
+    // Add Error Card section
+    content.push_str("## Error Card\n\n");
+    content.push_str("Error cards are displayed when there's an issue with fetching data from the GitHub API. They always use the default light theme styling.\n\n");
+    content.push_str("| Type | Example |\n");
+    content.push_str("|------|--------|\n");
+    content.push_str(&format!(
+        "| Short Message | ![Error Card Short](examples/{}) |\n",
+        examples.error_short_file
+    ));
+    content.push_str(&format!(
+        "| Long Message | ![Error Card Long](examples/{}) |\n",
+        examples.error_long_file
+    ));
 
     Ok(content)
 }
@@ -544,14 +596,17 @@ mod tests {
         let langs_transparent_examples = BTreeMap::new();
         let langs_horizontal_transparent_examples = BTreeMap::new();
 
-        let result = generate_readme_content(
-            &stats_examples,
-            &langs_examples,
-            &langs_horizontal_examples,
-            &stats_transparent_examples,
-            &langs_transparent_examples,
-            &langs_horizontal_transparent_examples,
-        );
+        let examples = ThemeExamples {
+            stats_examples: &stats_examples,
+            langs_examples: &langs_examples,
+            langs_horizontal_examples: &langs_horizontal_examples,
+            stats_transparent_examples: &stats_transparent_examples,
+            langs_transparent_examples: &langs_transparent_examples,
+            langs_horizontal_transparent_examples: &langs_horizontal_transparent_examples,
+            error_short_file: "error-card-short.svg",
+            error_long_file: "error-card-long.svg",
+        };
+        let result = generate_readme_content(examples);
         assert!(result.is_ok());
 
         let content = result.unwrap();
@@ -592,14 +647,17 @@ mod tests {
         let langs_transparent_examples = BTreeMap::new();
         let langs_horizontal_transparent_examples = BTreeMap::new();
 
-        let result = generate_readme_content(
-            &stats_examples,
-            &langs_examples,
-            &langs_horizontal_examples,
-            &stats_transparent_examples,
-            &langs_transparent_examples,
-            &langs_horizontal_transparent_examples,
-        );
+        let examples = ThemeExamples {
+            stats_examples: &stats_examples,
+            langs_examples: &langs_examples,
+            langs_horizontal_examples: &langs_horizontal_examples,
+            stats_transparent_examples: &stats_transparent_examples,
+            langs_transparent_examples: &langs_transparent_examples,
+            langs_horizontal_transparent_examples: &langs_horizontal_transparent_examples,
+            error_short_file: "error-card-short.svg",
+            error_long_file: "error-card-long.svg",
+        };
+        let result = generate_readme_content(examples);
         assert!(result.is_ok());
 
         let content = result.unwrap();
@@ -734,14 +792,17 @@ mod tests {
             "langs-card-light-horizontal-transparent.svg".to_string(),
         );
 
-        let result = generate_readme_content(
-            &stats_examples,
-            &langs_examples,
-            &langs_horizontal_examples,
-            &stats_transparent_examples,
-            &langs_transparent_examples,
-            &langs_horizontal_transparent_examples,
-        );
+        let examples = ThemeExamples {
+            stats_examples: &stats_examples,
+            langs_examples: &langs_examples,
+            langs_horizontal_examples: &langs_horizontal_examples,
+            stats_transparent_examples: &stats_transparent_examples,
+            langs_transparent_examples: &langs_transparent_examples,
+            langs_horizontal_transparent_examples: &langs_horizontal_transparent_examples,
+            error_short_file: "error-card-short.svg",
+            error_long_file: "error-card-long.svg",
+        };
+        let result = generate_readme_content(examples);
         assert!(result.is_ok());
 
         let content = result.unwrap();

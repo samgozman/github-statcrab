@@ -9,6 +9,7 @@ use serde::Deserialize;
 use std::{collections::HashSet, str::FromStr};
 
 use crate::cards::card::{CardSettings, CardTheme};
+use crate::cards::error_card::ErrorCard;
 use crate::cards::langs_card::{LangsCard, LayoutType};
 use crate::github::{GitHubApi, GitHubApiError, get_github_cache, get_github_rate_limit};
 
@@ -59,20 +60,15 @@ async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
 
     // Validate username
     if let Err(e) = validate_username(&q.username) {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({"error": e})),
-        )
-            .into_response();
+        return error_response(StatusCode::BAD_REQUEST, &e);
     }
 
     // Check if username is allowed to use the API
     if !is_username_allowed(&q.username) {
-        return (
+        return error_response(
             StatusCode::FORBIDDEN,
-            Json(serde_json::json!({"error": "Username not authorized to access this service"})),
-        )
-            .into_response();
+            "Username not authorized to access this service",
+        );
     }
 
     // Build card settings from query (with defaults applied)
@@ -85,25 +81,16 @@ async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
     let github_stats = match github_api.fetch_user_stats(&q.username).await {
         Ok(stats) => stats,
         Err(GitHubApiError::UserNotFound) => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(serde_json::json!({"error": "User not found"})),
-            )
-                .into_response();
+            return error_response(StatusCode::NOT_FOUND, "User not found");
         }
         Err(GitHubApiError::InvalidUsername(msg)) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(serde_json::json!({"error": msg})),
-            )
-                .into_response();
+            return error_response(StatusCode::BAD_REQUEST, &msg);
         }
         Err(GitHubApiError::MissingToken) => {
-            return (
+            return error_response(
                 StatusCode::SERVICE_UNAVAILABLE,
-                Json(serde_json::json!({"error": "GitHub API token not configured"})),
-            )
-                .into_response();
+                "GitHub API token not configured",
+            );
         }
         Err(GitHubApiError::RateLimitExceeded) => {
             // Report rate limit exceeded to Sentry as it's an operational issue
@@ -111,11 +98,10 @@ async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
                 &format!("GitHub API rate limit exceeded for user: {}", q.username),
                 sentry::Level::Warning,
             );
-            return (
+            return error_response(
                 StatusCode::TOO_MANY_REQUESTS,
-                Json(serde_json::json!({"error": "GitHub API rate limit exceeded"})),
-            )
-                .into_response();
+                "GitHub API rate limit exceeded",
+            );
         }
         Err(GitHubApiError::RateLimitProtection(remaining, reset_time)) => {
             // Calculate seconds until reset
@@ -125,30 +111,32 @@ async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
                 .unwrap_or(0);
             let retry_after = reset_time.saturating_sub(current_time);
 
+            let message = format!(
+                "Rate limit protection active: {} requests remaining, reset at {}",
+                remaining, reset_time
+            );
+            let error_card = ErrorCard::new(message);
+            let svg = error_card.render();
+
             let mut headers = axum::http::HeaderMap::new();
+            headers.insert(
+                header::CONTENT_TYPE,
+                header::HeaderValue::from_static("image/svg+xml"),
+            );
             if let Ok(retry_header) = axum::http::HeaderValue::from_str(&retry_after.to_string()) {
                 headers.insert("retry-after", retry_header);
             }
 
-            return (
-                StatusCode::TOO_MANY_REQUESTS,
-                headers,
-                Json(serde_json::json!({
-                    "error": format!("Rate limit protection active: {} requests remaining, reset at {}", remaining, reset_time),
-                    "retry_after_seconds": retry_after
-                })),
-            )
-                .into_response();
+            return (StatusCode::TOO_MANY_REQUESTS, headers, svg).into_response();
         }
         Err(e) => {
             // Report all other unexpected errors to Sentry
             sentry::capture_error(&e);
             tracing::error!("GitHub API error: {e}");
-            return (
+            return error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({"error": "Failed to fetch user statistics"})),
-            )
-                .into_response();
+                "Failed to fetch user statistics",
+            );
         }
     };
 
@@ -209,11 +197,10 @@ async fn get_stats_card(Query(q): Query<StatsCardQuery>) -> impl IntoResponse {
     .count();
 
     if visible < 2 {
-        return (
+        return error_response(
             StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({"error": "hide would remove too many stats; at least 2 must remain"})),
-        )
-            .into_response();
+            "hide would remove too many stats; at least 2 must remain",
+        );
     }
 
     let svg = stats_card.render();
@@ -271,20 +258,15 @@ async fn get_langs_card(Query(q): Query<LangsCardQuery>) -> impl IntoResponse {
 
     // Validate username
     if let Err(e) = validate_username(&q.username) {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({"error": e})),
-        )
-            .into_response();
+        return error_response(StatusCode::BAD_REQUEST, &e);
     }
 
     // Check if username is allowed to use the API
     if !is_username_allowed(&q.username) {
-        return (
+        return error_response(
             StatusCode::FORBIDDEN,
-            Json(serde_json::json!({"error": "Username not authorized to access this service"})),
-        )
-            .into_response();
+            "Username not authorized to access this service",
+        );
     }
 
     // Build card settings from query (with defaults applied)
@@ -311,25 +293,16 @@ async fn get_langs_card(Query(q): Query<LangsCardQuery>) -> impl IntoResponse {
     {
         Ok(stats) => stats,
         Err(GitHubApiError::UserNotFound) => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(serde_json::json!({"error": "User not found"})),
-            )
-                .into_response();
+            return error_response(StatusCode::NOT_FOUND, "User not found");
         }
         Err(GitHubApiError::InvalidUsername(msg)) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(serde_json::json!({"error": msg})),
-            )
-                .into_response();
+            return error_response(StatusCode::BAD_REQUEST, &msg);
         }
         Err(GitHubApiError::MissingToken) => {
-            return (
+            return error_response(
                 StatusCode::SERVICE_UNAVAILABLE,
-                Json(serde_json::json!({"error": "GitHub API token not configured"})),
-            )
-                .into_response();
+                "GitHub API token not configured",
+            );
         }
         Err(GitHubApiError::RateLimitExceeded) => {
             // Report rate limit exceeded to Sentry as it's an operational issue
@@ -340,11 +313,10 @@ async fn get_langs_card(Query(q): Query<LangsCardQuery>) -> impl IntoResponse {
                 ),
                 sentry::Level::Warning,
             );
-            return (
+            return error_response(
                 StatusCode::TOO_MANY_REQUESTS,
-                Json(serde_json::json!({"error": "GitHub API rate limit exceeded"})),
-            )
-                .into_response();
+                "GitHub API rate limit exceeded",
+            );
         }
         Err(GitHubApiError::RateLimitProtection(remaining, reset_time)) => {
             // Calculate seconds until reset
@@ -359,25 +331,28 @@ async fn get_langs_card(Query(q): Query<LangsCardQuery>) -> impl IntoResponse {
                 headers.insert("retry-after", retry_header);
             }
 
-            return (
-                StatusCode::TOO_MANY_REQUESTS,
-                headers,
-                Json(serde_json::json!({
-                    "error": format!("Rate limit protection active: {} requests remaining, reset at {}", remaining, reset_time),
-                    "retry_after_seconds": retry_after
-                })),
-            )
-                .into_response();
+            let message = format!(
+                "Rate limit protection active: {} requests remaining, reset at {}",
+                remaining, reset_time
+            );
+            let error_card = ErrorCard::new(message);
+            let svg = error_card.render();
+
+            headers.insert(
+                header::CONTENT_TYPE,
+                header::HeaderValue::from_static("image/svg+xml"),
+            );
+
+            return (StatusCode::TOO_MANY_REQUESTS, headers, svg).into_response();
         }
         Err(e) => {
             // Report all other unexpected errors to Sentry
             sentry::capture_error(&e);
             tracing::error!("GitHub API error: {e}");
-            return (
+            return error_response(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({"error": "Failed to fetch user languages"})),
-            )
-                .into_response();
+                "Failed to fetch user languages",
+            );
         }
     };
 
@@ -430,6 +405,19 @@ fn svg_response(svg: String) -> Response {
         header::HeaderValue::from_static("image/svg+xml"),
     );
     (StatusCode::OK, headers, svg).into_response()
+}
+
+/// Helper function to create an error response with ErrorCard SVG and appropriate status code
+fn error_response(status: StatusCode, message: &str) -> Response {
+    let error_card = ErrorCard::new(message.to_string());
+    let svg = error_card.render();
+
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        header::CONTENT_TYPE,
+        header::HeaderValue::from_static("image/svg+xml"),
+    );
+    (status, headers, svg).into_response()
 }
 
 fn validate_username(username: &str) -> Result<(), String> {

@@ -1,0 +1,37 @@
+/* 
+  * Error Card styles for GitHub StatCrab
+*/
+
+.error-message {
+  fill: #991b1b;
+  font: 400 15px "Helvetica Neue", Helvetica, Arial, sans-serif;
+  line-height: 1.4;
+}
+
+.error-icon {
+  fill: #dc2626;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.error-icon-container circle {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+.link-text {
+  fill: #0284c7;
+  font: 500 13px "Helvetica Neue", Helvetica, Arial, sans-serif;
+  cursor: pointer;
+}
+
+.docs-link-bg {
+  transition: all 0.2s ease;
+}
+
+.docs-link-container:hover .docs-link-bg {
+  fill: #e0f2fe;
+  stroke: #0369a1;
+}
+
+.docs-link-container:hover .link-text {
+  fill: #0369a1;
+}

@@ -67,10 +67,20 @@ async fn test_stats_card_with_nonexistent_user() {
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
+    // Check content type is SVG (error responses are now SVG)
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    assert_eq!(content_type, "image/svg+xml");
+
     let body = resp.into_body().collect().await.unwrap().to_bytes();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-    let error_msg = json.get("error").and_then(|v| v.as_str()).unwrap_or("");
-    assert!(error_msg.contains("User not found"));
+    let body_str = String::from_utf8(body.to_vec()).unwrap_or_default();
+
+    // Check that it's an SVG error card containing the error message
+    assert!(body_str.contains("<svg"));
+    assert!(body_str.contains("User not found"));
 
     println!("✓ Correctly handled nonexistent user: {}", username);
 }
@@ -224,10 +234,24 @@ async fn test_hiding_too_many_stats() {
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 
+    // Check content type is SVG (error responses are now SVG)
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    assert_eq!(content_type, "image/svg+xml");
+
     let body = resp.into_body().collect().await.unwrap().to_bytes();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-    let error_msg = json.get("error").and_then(|v| v.as_str()).unwrap_or("");
-    assert!(error_msg.contains("at least 2 must remain"));
+    let body_str = String::from_utf8(body.to_vec()).unwrap_or_default();
+
+    // Check that it's an SVG error card containing the error message
+    assert!(body_str.contains("<svg"));
+
+    // ErrorCard splits long messages into lines, so check for key parts
+    assert!(body_str.contains("hide would remove too many stats"));
+    assert!(body_str.contains("at least 2"));
+    assert!(body_str.contains("must remain"));
 
     println!("✓ Correctly prevented hiding too many stats");
 }
@@ -295,10 +319,20 @@ async fn test_langs_card_with_nonexistent_user() {
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 
+    // Check content type is SVG (error responses are now SVG)
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    assert_eq!(content_type, "image/svg+xml");
+
     let body = resp.into_body().collect().await.unwrap().to_bytes();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-    let error_msg = json.get("error").and_then(|v| v.as_str()).unwrap_or("");
-    assert!(error_msg.contains("User not found"));
+    let body_str = String::from_utf8(body.to_vec()).unwrap_or_default();
+
+    // Check that it's an SVG error card containing the error message
+    assert!(body_str.contains("<svg"));
+    assert!(body_str.contains("User not found"));
 
     println!(
         "✓ Correctly handled nonexistent user for langs card: {}",
@@ -522,10 +556,20 @@ async fn test_langs_card_invalid_username() {
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 
+    // Check content type is SVG (error responses are now SVG)
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    assert_eq!(content_type, "image/svg+xml");
+
     let body = resp.into_body().collect().await.unwrap().to_bytes();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-    let error_msg = json.get("error").and_then(|v| v.as_str()).unwrap_or("");
-    assert!(error_msg.contains("Username cannot contain spaces"));
+    let body_str = String::from_utf8(body.to_vec()).unwrap_or_default();
+
+    // Check that it's an SVG error card containing the error message
+    assert!(body_str.contains("<svg"));
+    assert!(body_str.contains("Username cannot contain spaces"));
 
     println!("✓ Correctly rejected invalid username in langs card");
 }

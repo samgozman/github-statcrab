@@ -1,0 +1,115 @@
+<svg
+  width="380"
+  height="228"
+  viewBox="0 0 380 228"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  role="img"
+  aria-labelledby="title-id"
+  aria-describedby="description-id"
+>
+  <style>
+  /* 
+    * Card styles for GitHub StatCrab
+    * 
+    * This file contains the styles for the base card component.
+  */
+  
+  .title {
+    font: 800 17px "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  
+  .statsCard > .row > .label, .statsCard > .row > .value {
+    font: 600 15px "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  
+  .langsCard > .row > .label, .langsCard > .row > .value {
+    font: 400 12px "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  
+  /**
+   * Light theme.
+   */
+  
+  .title {
+    fill: #1f2937;
+  }
+  
+  .label, .value {
+    fill: #374151;
+  }
+  
+  .icon {
+    fill: #1f2937;
+  }
+  
+  .background {
+    fill: #ffffff;
+    stroke: #e5e7eb;
+  }
+  
+  .progressBarBackground {
+    fill: #f3f4f6;
+  }
+/* 
+  * Error Card styles for GitHub StatCrab
+*/
+
+.error-message {
+  fill: #991b1b;
+  font: 400 15px "Helvetica Neue", Helvetica, Arial, sans-serif;
+  line-height: 1.4;
+}
+
+.error-icon {
+  fill: #dc2626;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.error-icon-container circle {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+.link-text {
+  fill: #0284c7;
+  font: 500 13px "Helvetica Neue", Helvetica, Arial, sans-serif;
+  cursor: pointer;
+}
+
+.docs-link-bg {
+  transition: all 0.2s ease;
+}
+
+.docs-link-container:hover .docs-link-bg {
+  fill: #e0f2fe;
+  stroke: #0369a1;
+}
+
+.docs-link-container:hover .link-text {
+  fill: #0369a1;
+}
+
+  </style>
+  <title id="title-id">Error</title>
+  <desc id="description-id">An error occurred while processing your request</desc>
+  <rect class="background" x="0.5" y="0.5" rx="5" width="379" height="227" stroke-opacity="1"/>
+  <g transform="translate(16, 34)"><text x="0" y="0" class="title">Error</text></g>
+  <g class="errorCard" x="0" y="0">
+    <g class="error-icon-container">
+      <circle cx="32" cy="66" r="16" fill="#fee2e2" stroke="#fca5a5" stroke-width="1.5"/>
+      <text x="32" y="66" font-size="20" font-weight="bold" class="error-icon" text-anchor="middle" dominant-baseline="central">!</text>
+    </g>
+    <text x="56" y="74" class="error-message">The GitHub API returned an error when trying</text>
+    <text x="56" y="96" class="error-message">to fetch user statistics. This might be due</text>
+    <text x="56" y="118" class="error-message">to rate limiting or an invalid username.</text>
+    <text x="56" y="140" class="error-message">Please check your configuration and try</text>
+    <text x="56" y="162" class="error-message">again.</text>
+    <g class="docs-link-container">
+      <rect x="58" y="184" width="266" height="28" rx="6" fill="#f0f9ff" stroke="#0ea5e9" stroke-width="1" class="docs-link-bg"/>
+      <a href="https://github.com/samgozman/github-statcrab?tab=readme-ov-file#github-statcrab" target="_blank" class="docs-link">
+        <text x="70" y="202" class="link-text">📚 Readme: samgozman/github-statcrab</text>
+      </a>
+    </g>
+
+  </g>
+</svg>
