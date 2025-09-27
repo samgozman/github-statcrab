@@ -7,7 +7,7 @@ on:
 name: CI
 
 env:
-  RUST_TOOLCHAIN: 1.90.0
+  RUST_TOOLCHAIN: 1.89.0
 
 jobs:
   fmt:

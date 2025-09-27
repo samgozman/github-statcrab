@@ -8,7 +8,7 @@ homepage = "https://github.com/samgozman/github-statcrab"
 repository = "https://github.com/samgozman/github-statcrab"
 authors = ["Sam Gozman <sam@gozman.space>"]
 description = "GitHub profile stats for readme generated on the fly"
-rust-version = "1.90.0"
+rust-version = "1.89.0"
 
 [dependencies]
 anyhow = "1.0.100"

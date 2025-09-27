@@ -1,7 +1,7 @@
 name: Update supported languages JSON file
-on: 
+on:
   schedule:
-    - cron: '0 0 * * 0' # Every Sunday at midnight
+    - cron: "0 0 * * 0" # Every Sunday at midnight
 
 permissions:
   contents: write
@@ -31,6 +31,5 @@ jobs:
           branch: "update-supported-langs/patch"
           delete-branch: true
           title: Update supported languages JSON file
-          body:
-            "Update `language-colors.json` file from [GitHub Linguist languages config](https://raw.githubusercontent.com/github/linguist/master/lib/linguist/languages.yml)."
+          body: "Update `language-colors.json` file from [GitHub Linguist languages config](https://raw.githubusercontent.com/github/linguist/master/lib/linguist/languages.yml)."
           labels: "ci"
