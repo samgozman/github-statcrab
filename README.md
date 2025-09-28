@@ -33,12 +33,12 @@
 
 Displays the top programming languages used by a GitHub user in a visually appealing card format. You can insert it into your GitHub README with a simple markdown snippet.
 
-Just replace `<your-hosted-instacne>` with the URL of your hosted instance of the `github-statcrab` server and `samgozman` with your GitHub username.
+Just replace `<your-hosted-instance>` with the URL of your hosted instance of the `github-statcrab` server and `samgozman` with your GitHub username.
 
 ### Horizontal layout
 
 ```markdown
-[![GitHub Top Languages](https://<your-hosted-instacne>/api/langs-card?username=samgozman&layout=horizontal&max_languages=8&theme=dracula&size_weight=0.5&count_weight=0.5)](https://github.com/samgozman/github-statcrab)
+[![GitHub Top Languages](https://<your-hosted-instance>/api/langs-card?username=samgozman&layout=horizontal&max_languages=8&theme=dracula&size_weight=0.5&count_weight=0.5)](https://github.com/samgozman/github-statcrab)
 ```
 
 [![GitHub Top Languages for samgozman](https://github-statcrab-ce.extr.app/api/langs-card?username=samgozman&layout=horizontal&max_languages=8&theme=dracula&size_weight=0.5&count_weight=0.5)](https://github.com/samgozman/github-statcrab)
@@ -46,7 +46,7 @@ Just replace `<your-hosted-instacne>` with the URL of your hosted instance of th
 ### Vertical layout
 
 ```markdown
-[![GitHub Top Languages](https://<your-hosted-instacne>/api/langs-card?username=samgozman&layout=vertical&max_languages=8&theme=dracula&size_weight=0.5&count_weight=0.5)](https://github.com/samgozman/github-statcrab)
+[![GitHub Top Languages](https://<your-hosted-instance>/api/langs-card?username=samgozman&layout=vertical&max_languages=8&theme=dracula&size_weight=0.5&count_weight=0.5)](https://github.com/samgozman/github-statcrab)
 ```
 
 [![GitHub Top Languages for samgozman](https://github-statcrab-ce.extr.app/api/langs-card?username=samgozman&layout=vertical&max_languages=8&theme=dracula&size_weight=0.5&count_weight=0.5)](https://github.com/samgozman/github-statcrab)
@@ -73,10 +73,10 @@ Just replace `<your-hosted-instacne>` with the URL of your hosted instance of th
 Can be used to show GitHub user statistics such as total stars, forks, commits, pull requests, issues, and more. You can insert it into your GitHub README with a simple markdown snippet:
 
 ```markdown
-[![GitHub Stats for samgozman](https://<your-hosted-instacne>/api/stats-card?username=samgozman&theme=monokai)](https://github.com/samgozman/github-statcrab)
+[![GitHub Stats for samgozman](https://<your-hosted-instance>/api/stats-card?username=samgozman&theme=monokai)](https://github.com/samgozman/github-statcrab)
 ```
 
-You should replace `<your-hosted-instacne>` with the URL of your hosted instance of the `github-statcrab` server and `samgozman` with your GitHub username.
+You should replace `<your-hosted-instance>` with the URL of your hosted instance of the `github-statcrab` server and `samgozman` with your GitHub username.
 
 [![GitHub Stats for samgozman](https://github-statcrab-ce.extr.app/api/stats-card?username=samgozman&theme=monokai)](https://github.com/samgozman/github-statcrab)
 
