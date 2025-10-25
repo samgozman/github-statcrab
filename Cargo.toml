@@ -21,7 +21,7 @@ tokio = { version = "1.47.1", features = [
   "signal",
 ] }
 card_theme_macros = { path = "./card_theme_macros" }
-reqwest = { version = "0.12.23", default-features = false, features = [
+reqwest = { version = "0.12.24", default-features = false, features = [
   "json",
   "rustls-tls",
 ] }
