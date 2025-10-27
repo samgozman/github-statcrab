@@ -39,7 +39,7 @@ jobs:
           target: ${{ matrix.target }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload binary as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: server-binary-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/server
