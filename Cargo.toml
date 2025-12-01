@@ -29,7 +29,7 @@ graphql_client = "0.14.0"
 thiserror = "2.0.17"
 dotenvy = "0.15.7"
 serde_yaml = { version = "0.9.34-deprecated", optional = true }
-sentry = { version = "0.45.0", features = [
+sentry = { version = "0.46.0", features = [
   "tower-axum-matched-path",
   "tracing",
   "tower",
