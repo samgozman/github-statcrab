@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 /// GitHub user statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -122,6 +122,7 @@ pub struct CountableConnection {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct RepositoriesConnection {
+    #[serde(deserialize_with = "skip_null_nodes")]
     pub nodes: Vec<RepositoryNode>,
     #[serde(rename = "pageInfo")]
     pub page_info: PageInfo,
@@ -148,6 +149,7 @@ pub struct LanguagesUserData {
 
 #[derive(Debug, Deserialize)]
 pub struct LanguageRepositoriesConnection {
+    #[serde(deserialize_with = "skip_null_nodes")]
     pub nodes: Vec<LanguageRepositoryNode>,
     #[serde(rename = "pageInfo")]
     pub page_info: PageInfo,
@@ -173,4 +175,46 @@ pub struct LanguageEdge {
 #[derive(Debug, Deserialize)]
 pub struct LanguageNode {
     pub name: String,
+}
+
+/// GraphQL returns `null` for list items the token can't read (e.g. a repository it
+/// has no access to), so drop those instead of failing the whole response.
+fn skip_null_nodes<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    let nodes: Vec<Option<T>> = Vec::deserialize(deserializer)?;
+    Ok(nodes.into_iter().flatten().collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_repositories_connection_skips_null_nodes() {
+        let json = r#"{
+            "nodes": [{"stargazers": {"totalCount": 5}}, null, {"stargazers": {"totalCount": 2}}],
+            "pageInfo": {"hasNextPage": false, "endCursor": null}
+        }"#;
+        let connection: RepositoriesConnection = serde_json::from_str(json).unwrap();
+        let stars: Vec<u32> = connection
+            .nodes
+            .iter()
+            .map(|node| node.stargazers.total_count)
+            .collect();
+        assert_eq!(stars, vec![5, 2]);
+    }
+
+    #[test]
+    fn test_language_repositories_connection_skips_null_nodes() {
+        let json = r#"{
+            "nodes": [null, {"name": "repo", "languages": {"edges": []}}],
+            "pageInfo": {"hasNextPage": false, "endCursor": null}
+        }"#;
+        let connection: LanguageRepositoriesConnection = serde_json::from_str(json).unwrap();
+        assert_eq!(connection.nodes.len(), 1);
+        assert_eq!(connection.nodes[0].name, "repo");
+    }
 }
