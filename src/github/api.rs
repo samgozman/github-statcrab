@@ -99,6 +99,38 @@ fn check_rate_limit_with_data(rate_limit: &GitHubRateLimit) -> Result<(), GitHub
     Ok(())
 }
 
+/// Turn GraphQL errors into an API error. `FORBIDDEN` errors next to data are partial
+/// results (the token can't read some repositories), so they don't fail the request.
+fn check_graphql_errors(
+    errors: Option<Vec<GraphQLError>>,
+    has_data: bool,
+) -> Result<(), GitHubApiError> {
+    let Some(errors) = errors else {
+        return Ok(());
+    };
+    let Some(error) = errors.first() else {
+        return Ok(());
+    };
+
+    if has_data
+        && errors
+            .iter()
+            .all(|e| e.error_type.as_deref() == Some("FORBIDDEN"))
+    {
+        tracing::warn!(
+            "GitHub API returned partial data: {} inaccessible resource(s): {}",
+            errors.len(),
+            error.message
+        );
+        return Ok(());
+    }
+
+    if error.error_type.as_deref() == Some("NOT_FOUND") {
+        return Err(GitHubApiError::UserNotFound);
+    }
+    Err(GitHubApiError::GraphQLError(error.message.clone()))
+}
+
 #[derive(Debug)]
 pub struct GitHubApi {
     client: Client,
@@ -380,14 +412,8 @@ impl GitHubApi {
             self.execute_query(&query, variables).await?;
 
         // Handle GraphQL errors
-        if let Some(errors) = response.errors
-            && let Some(error) = errors.first()
-        {
-            if error.error_type.as_deref() == Some("NOT_FOUND") {
-                return Err(GitHubApiError::UserNotFound);
-            }
-            return Err(GitHubApiError::GraphQLError(error.message.clone()));
-        }
+        let has_data = response.data.as_ref().is_some_and(|d| d.user.is_some());
+        check_graphql_errors(response.errors, has_data)?;
 
         let user_response = response.data.ok_or(GitHubApiError::GraphQLError(
             "No data in response".to_string(),
@@ -499,14 +525,8 @@ impl GitHubApi {
                 self.execute_query(&query, variables).await?;
 
             // Handle GraphQL errors
-            if let Some(errors) = response.errors
-                && let Some(error) = errors.first()
-            {
-                if error.error_type.as_deref() == Some("NOT_FOUND") {
-                    return Err(GitHubApiError::UserNotFound);
-                }
-                return Err(GitHubApiError::GraphQLError(error.message.clone()));
-            }
+            let has_data = response.data.as_ref().is_some_and(|d| d.user.is_some());
+            check_graphql_errors(response.errors, has_data)?;
 
             let user_response = response.data.ok_or(GitHubApiError::GraphQLError(
                 "No data in response".to_string(),
@@ -549,6 +569,49 @@ impl GitHubApi {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn graphql_error(error_type: &str) -> GraphQLError {
+        GraphQLError {
+            message: "Resource not accessible by integration".to_string(),
+            error_type: Some(error_type.to_string()),
+        }
+    }
+
+    #[test]
+    fn test_graphql_errors_forbidden_with_data_is_partial_result() {
+        let errors = Some(vec![graphql_error("FORBIDDEN"), graphql_error("FORBIDDEN")]);
+        assert!(check_graphql_errors(errors, true).is_ok());
+    }
+
+    #[test]
+    fn test_graphql_errors_forbidden_without_data_fails() {
+        let errors = Some(vec![graphql_error("FORBIDDEN")]);
+        assert!(matches!(
+            check_graphql_errors(errors, false),
+            Err(GitHubApiError::GraphQLError(_))
+        ));
+    }
+
+    #[test]
+    fn test_graphql_errors_not_found_is_user_not_found() {
+        let errors = Some(vec![graphql_error("NOT_FOUND")]);
+        assert!(matches!(
+            check_graphql_errors(errors, true),
+            Err(GitHubApiError::UserNotFound)
+        ));
+    }
+
+    #[test]
+    fn test_graphql_errors_mixed_with_data_fails() {
+        let errors = Some(vec![graphql_error("FORBIDDEN"), graphql_error("INTERNAL")]);
+        assert!(check_graphql_errors(errors, true).is_err());
+    }
+
+    #[test]
+    fn test_graphql_errors_none() {
+        assert!(check_graphql_errors(None, false).is_ok());
+        assert!(check_graphql_errors(Some(vec![]), false).is_ok());
+    }
 
     #[test]
     fn test_rate_limit_check_with_no_data() {
